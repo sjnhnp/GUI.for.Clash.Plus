@@ -238,7 +238,10 @@ const generateRuleProviders = async (
           behavior: rule['ruleset-behavior'],
           format: rule['ruleset-format'],
           proxy: group?.name || 'DIRECT',
-          interval: rule['ruleset-interval'],
+          interval:
+            typeof rule['ruleset-interval'] === 'number'
+              ? rule['ruleset-interval']
+              : parseInt(rule['ruleset-interval']) || 86400,
         }
       } else if (rule['ruleset-type'] === 'inline') {
         providers[rule['ruleset-name']] = {
