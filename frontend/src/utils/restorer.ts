@@ -174,8 +174,9 @@ export const restoreProfile = (
           // For all non-SUB-RULE rules, the proxy/policy is in the 'proxy' variable
           _proxy = getRuleProxy(proxy)
         } else {
-          // For SUB-RULE, the last part is the sub-rule name, not a proxy
-          _proxy = '' // Mark as valid but no proxy needed
+          // For SUB-RULE, the last part is the sub-rule name
+          // We'll use the proxy field to store the sub-rule name
+          _proxy = proxy // e.g., "QUIC_CHECK"
         }
 
         // Skip invalid rules：proxy missing (except for SUB-RULE which doesn't need proxy)

@@ -47,11 +47,15 @@ export const generateRule = (
     }
   }
 
-  // If the rule is a Logic rule and already defines a Sub-Rule target in the payload,
-  // do not append the proxy/policy again.
+  // Check if this is a SUB-RULE type (payload starts with SUB-RULE,)
   const isLogicSubRule = type === RuleType.Logic && /^SUB-RULE,/i.test(payload)
+
   if (!isLogicSubRule) {
+    // Normal rules: append proxy/policy
     ruleStr += ',' + proxyStr
+  } else {
+    // SUB-RULE rules: append sub-rule name (stored in proxy field)
+    ruleStr += ',' + proxy  // proxy contains the sub-rule name, not a proxy group ID
   }
 
   const supportNoResolve = [

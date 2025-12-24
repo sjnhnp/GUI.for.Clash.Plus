@@ -43,6 +43,8 @@ jobs:
       APP_NAME: GUI.for.Clash
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for git describe to work
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -58,18 +60,21 @@ jobs:
         shell: pwsh
         run: |
           if ("${{ github.event_name }}" -eq "push") {
+            # Tag push: use the tag name
             "VERSION=${{ github.ref_name }}" | Out-File -FilePath $env:GITHUB_ENV -Append
           } else {
+            # Manual trigger: use input or auto-increment
             $inputVer = "${{ github.event.inputs.version }}"
             if ($inputVer) {
               "VERSION=$inputVer" | Out-File -FilePath $env:GITHUB_ENV -Append
             } else {
+              # Auto-increment patch version
               $latestTag = git describe --tags --match "v[0-9]*" --abbrev=0 2>$null
               if (-not $latestTag) { $latestTag = "v0.0.0" }
               $versionParts = $latestTag.Substring(1) -split '\.' 
               $newPatch = [int]$versionParts[2] + 1
               $newTag = "v$($versionParts[0]).$($versionParts[1]).$newPatch"
-              Write-Host "Auto-incremented version to $newTag"
+              Write-Host "Auto-incremented version from $latestTag to $newTag"
               "VERSION=$newTag" | Out-File -FilePath $env:GITHUB_ENV -Append
             }
           }
@@ -107,6 +112,8 @@ jobs:
       APP_NAME: GUI.for.Clash
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for git describe to work
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -124,12 +131,15 @@ jobs:
         id: get_version
         run: |
           if [ "${{ github.event_name }}" == "push" ]; then
+            # Tag push: use the tag name
             echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
           else
+            # Manual trigger: use input or auto-increment
             INPUT_VER="${{ github.event.inputs.version }}"
             if [ ! -z "$INPUT_VER" ]; then
               echo "VERSION=$INPUT_VER" >> $GITHUB_ENV
             else
+              # Auto-increment patch version
               LATEST_TAG=$(git describe --tags --match "v[0-9]*" --abbrev=0 2>/dev/null || echo "v0.0.0")
               VERSION_NO_V=${LATEST_TAG#v}
               IFS='.' read -r -a PARTS <<< "$VERSION_NO_V"
@@ -138,7 +148,7 @@ jobs:
               PATCH=${PARTS[2]}
               NEW_PATCH=$((PATCH + 1))
               NEW_TAG="v$MAJOR.$MINOR.$NEW_PATCH"
-              echo "Auto-incremented version to $NEW_TAG"
+              echo "Auto-incremented version from $LATEST_TAG to $NEW_TAG"
               echo "VERSION=$NEW_TAG" >> $GITHUB_ENV
             fi
           fi
