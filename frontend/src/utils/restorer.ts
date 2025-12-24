@@ -50,6 +50,7 @@ export const restoreProfile = (
     ],
     mixinConfig: MixinConfigDefaults(),
     scriptConfig: ScriptConfigDefaults(),
+    subRulesConfig: {},
   }
 
   const GroupNameIdMap: Record<string, string> = {}
@@ -146,9 +147,23 @@ export const restoreProfile = (
           qs = qs.substring(0, qs.lastIndexOf(','))
         }
 
-        const lastComma = qs.lastIndexOf(',')
-        const payloadAndType = qs.substring(0, lastComma)
-        const proxy = qs.substring(lastComma + 1)
+        // Check if this is a Sub-Rule type logic rule
+        const isSubRule = /Sub-Rule/i.test(qs)
+
+        let payloadAndType: string
+        let proxy: string
+        let _proxy: string | undefined
+
+        if (isSubRule) {
+          // For Sub-Rule syntax, the entire rule IS the payload, no proxy needed
+          payloadAndType = qs
+          proxy = ''
+          _proxy = '' // Sub-Rule doesn't use proxy parameter
+        } else {
+          const lastComma = qs.lastIndexOf(',')
+          payloadAndType = qs.substring(0, lastComma)
+          proxy = qs.substring(lastComma + 1)
+        }
 
         const parts = payloadAndType.split(',')
         let type = parts[0]
@@ -158,16 +173,20 @@ export const restoreProfile = (
         const upperType = type.toUpperCase()
         if (
           ['AND', 'OR', 'NOT', 'SUB-RULE'].includes(upperType) ||
-          payloadAndType.includes('((')
+          payloadAndType.includes('((') ||
+          isSubRule
         ) {
           type = RuleType.Logic
           payload = payloadAndType
         }
 
-        const _proxy = type === RuleType.Match ? getRuleProxy(payloadAndType) : getRuleProxy(proxy)
+        if (!isSubRule) {
+          // For all non-SubRule rules, the proxy/policy is in the 'proxy' variable
+          _proxy = getRuleProxy(proxy)
+        }
 
-        // Skip invalid rules：proxy missing
-        if (!_proxy) {
+        // Skip invalid rules：proxy missing (except for Sub-Rule which doesn't need proxy)
+        if (!_proxy && !isSubRule) {
           return
         }
 
@@ -213,6 +232,8 @@ export const restoreProfile = (
           'ruleset-interval': 0,
         })
       })
+    } else if (field === 'sub-rules') {
+      profile.subRulesConfig = value
     }
   })
 
