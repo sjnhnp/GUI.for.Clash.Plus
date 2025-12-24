@@ -127,7 +127,7 @@ export const usePluginsStore = defineStore('plugins', () => {
     reloadTrigger && updatePluginTrigger(plugin)
   }
 
-  // FIXME: Plug-in execution order is wrong
+  // Fixed: Maintain plugin execution order based on plugins.value array order
   const updatePluginTrigger = (plugin: Plugin, isUpdate = true) => {
     const triggers = Object.keys(PluginsTriggerMap) as PluginTrigger[]
     triggers.forEach((trigger) => {
@@ -138,6 +138,12 @@ export const usePluginsStore = defineStore('plugins', () => {
     if (isUpdate) {
       plugin.triggers.forEach((trigger) => {
         PluginsTriggerMap[trigger].observers.push(plugin.id)
+        // Sort observers based on their position in plugins.value to maintain consistent order
+        PluginsTriggerMap[trigger].observers.sort((a, b) => {
+          const indexA = plugins.value.findIndex((p) => p.id === a)
+          const indexB = plugins.value.findIndex((p) => p.id === b)
+          return indexA - indexB
+        })
       })
     }
   }
@@ -149,7 +155,7 @@ export const usePluginsStore = defineStore('plugins', () => {
 
   const addPlugin = async (plugin: Plugin) => {
     plugins.value.push(plugin)
-    await _doUpdatePlugin(plugin).catch((_) => {})
+    await _doUpdatePlugin(plugin).catch((_) => { })
     try {
       await savePlugins()
       updatePluginTrigger(plugin)
@@ -174,7 +180,7 @@ export const usePluginsStore = defineStore('plugins', () => {
       plugins.value.splice(idx, 0, plugin)
       throw error
     }
-    plugin.path.startsWith('data') && (await RemoveFile(plugin.path).catch((_) => {}))
+    plugin.path.startsWith('data') && (await RemoveFile(plugin.path).catch((_) => { }))
     // Remove configuration
     if (appSettingsStore.app.pluginSettings[plugin.id]) {
       if (await confirm('Tips', 'plugins.removeConfiguration').catch(() => 0)) {

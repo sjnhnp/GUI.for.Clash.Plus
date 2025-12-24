@@ -4,7 +4,7 @@ import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   base: './',
   plugins: [vue()],
   resolve: {
@@ -17,6 +17,11 @@ export default defineConfig({
   build: {
     assetsInlineLimit: 100 * 1024, // 100KB
     chunkSizeWarningLimit: 4096, // 4MB
+    minify: 'esbuild',
     // __ROLLUP_MANUAL_CHUNKS__
   },
-})
+  esbuild: {
+    // Remove console.log and debugger in production
+    drop: mode === 'production' ? ['console', 'debugger'] : [],
+  },
+}))
