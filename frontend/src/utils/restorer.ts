@@ -147,23 +147,9 @@ export const restoreProfile = (
           qs = qs.substring(0, qs.lastIndexOf(','))
         }
 
-        // Check if this is a Sub-Rule type logic rule
-        const isSubRule = /Sub-Rule/i.test(qs)
-
-        let payloadAndType: string
-        let proxy: string
-        let _proxy: string | undefined
-
-        if (isSubRule) {
-          // For Sub-Rule syntax, the entire rule IS the payload, no proxy needed
-          payloadAndType = qs
-          proxy = ''
-          _proxy = '' // Sub-Rule doesn't use proxy parameter
-        } else {
-          const lastComma = qs.lastIndexOf(',')
-          payloadAndType = qs.substring(0, lastComma)
-          proxy = qs.substring(lastComma + 1)
-        }
+        const lastComma = qs.lastIndexOf(',')
+        const payloadAndType = qs.substring(0, lastComma)
+        const proxy = qs.substring(lastComma + 1)
 
         const parts = payloadAndType.split(',')
         let type = parts[0]
@@ -173,19 +159,26 @@ export const restoreProfile = (
         const upperType = type.toUpperCase()
         if (
           ['AND', 'OR', 'NOT', 'SUB-RULE'].includes(upperType) ||
-          payloadAndType.includes('((') ||
-          isSubRule
+          payloadAndType.includes('((')
         ) {
           type = RuleType.Logic
           payload = payloadAndType
         }
 
+        // SUB-RULE type doesn't use proxy parameter
+        // Format: SUB-RULE,(logic_condition),sub_rule_name
+        const isSubRule = upperType === 'SUB-RULE'
+
+        let _proxy: string | undefined
         if (!isSubRule) {
-          // For all non-SubRule rules, the proxy/policy is in the 'proxy' variable
+          // For all non-SUB-RULE rules, the proxy/policy is in the 'proxy' variable
           _proxy = getRuleProxy(proxy)
+        } else {
+          // For SUB-RULE, the last part is the sub-rule name, not a proxy
+          _proxy = '' // Mark as valid but no proxy needed
         }
 
-        // Skip invalid rules：proxy missing (except for Sub-Rule which doesn't need proxy)
+        // Skip invalid rules：proxy missing (except for SUB-RULE which doesn't need proxy)
         if (!_proxy && !isSubRule) {
           return
         }

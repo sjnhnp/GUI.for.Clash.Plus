@@ -53,6 +53,27 @@ jobs:
           name: frontend-dist
           path: frontend/dist
 
+      - name: Get Version
+        id: get_version
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "push") {
+            "VERSION=${{ github.ref_name }}" | Out-File -FilePath $env:GITHUB_ENV -Append
+          } else {
+            $inputVer = "${{ github.event.inputs.version }}"
+            if ($inputVer) {
+              "VERSION=$inputVer" | Out-File -FilePath $env:GITHUB_ENV -Append
+            } else {
+              $latestTag = git describe --tags --match "v[0-9]*" --abbrev=0 2>$null
+              if (-not $latestTag) { $latestTag = "v0.0.0" }
+              $versionParts = $latestTag.Substring(1) -split '\.' 
+              $newPatch = [int]$versionParts[2] + 1
+              $newTag = "v$($versionParts[0]).$($versionParts[1]).$newPatch"
+              Write-Host "Auto-incremented version to $newTag"
+              "VERSION=$newTag" | Out-File -FilePath $env:GITHUB_ENV -Append
+            }
+          }
+
       - name: Build & Pack Windows
         shell: pwsh
         run: |
@@ -61,8 +82,9 @@ jobs:
             $env:GOOS="windows"
             $env:GOARCH=$arch
 
-            Write-Host "==> Building Windows $arch..."
-            ~/go/bin/wails build -m -s -trimpath -skipbindings -devtools -tags webkit2_41 -o "$env:APP_NAME.exe"
+            $ldflags = "-X 'github.com/GUI-for-Cores/GUI.for.Clash/bridge.Version=$env:VERSION'"
+            Write-Host "==> Building Windows $arch with version $env:VERSION..."
+            ~/go/bin/wails build -m -s -trimpath -skipbindings -devtools -tags webkit2_41 -ldflags $ldflags -o "$env:APP_NAME.exe"
 
             cd build/bin
             $zipName = "$env:APP_NAME-windows-$arch.zip"
@@ -98,14 +120,38 @@ jobs:
           go mod vendor
           sed -i "" "s/\[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular\]/[NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory]/g" vendor/github.com/wailsapp/wails/v2/internal/frontend/desktop/darwin/AppDelegate.m
 
+      - name: Get Version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" == "push" ]; then
+            echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+          else
+            INPUT_VER="${{ github.event.inputs.version }}"
+            if [ ! -z "$INPUT_VER" ]; then
+              echo "VERSION=$INPUT_VER" >> $GITHUB_ENV
+            else
+              LATEST_TAG=$(git describe --tags --match "v[0-9]*" --abbrev=0 2>/dev/null || echo "v0.0.0")
+              VERSION_NO_V=${LATEST_TAG#v}
+              IFS='.' read -r -a PARTS <<< "$VERSION_NO_V"
+              MAJOR=${PARTS[0]}
+              MINOR=${PARTS[1]}
+              PATCH=${PARTS[2]}
+              NEW_PATCH=$((PATCH + 1))
+              NEW_TAG="v$MAJOR.$MINOR.$NEW_PATCH"
+              echo "Auto-incremented version to $NEW_TAG"
+              echo "VERSION=$NEW_TAG" >> $GITHUB_ENV
+            fi
+          fi
+
       - name: Build & Pack macOS
         run: |
           build_and_pack() {
             arch=$1
             export GOOS=darwin GOARCH=$arch
 
-            echo "==> Building macOS $arch..."
-            ~/go/bin/wails build -m -s -trimpath -skipbindings -devtools -tags webkit2_41 -o $APP_NAME.exe
+            LDFLAGS="-X 'github.com/GUI-for-Cores/GUI.for.Clash/bridge.Version=$VERSION'"
+            echo "==> Building macOS $arch with version $VERSION..."
+            ~/go/bin/wails build -m -s -trimpath -skipbindings -devtools -tags webkit2_41 -ldflags "$LDFLAGS" -o $APP_NAME.exe
 
             cd build/bin
             zip -q -r $APP_NAME-darwin-$arch.zip $APP_NAME.app

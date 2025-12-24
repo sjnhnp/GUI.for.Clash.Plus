@@ -20,6 +20,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Version can be set at build time via -ldflags "-X 'github.com/GUI-for-Cores/GUI.for.Clash/bridge.Version=vX.Y.Z'"
+var Version = "v1.16.0"
+
 var Config = &AppConfig{}
 
 var Env = &EnvResult{
@@ -27,7 +30,7 @@ var Env = &EnvResult{
 	FromTaskSch: false,
 	WebviewPath: "",
 	AppName:     "",
-	AppVersion:  "v1.16.0",
+	AppVersion:  Version,
 	BasePath:    "",
 	OS:          sysruntime.GOOS,
 	ARCH:        sysruntime.GOARCH,
