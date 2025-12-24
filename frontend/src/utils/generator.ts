@@ -47,7 +47,12 @@ export const generateRule = (
     }
   }
 
-  ruleStr += ',' + proxyStr
+  // If the rule is a Logic rule and already defines a Sub-Rule target in the payload,
+  // do not append the proxy/policy again.
+  const isLogicSubRule = type === RuleType.Logic && /sub-rule/i.test(payload)
+  if (!isLogicSubRule) {
+    ruleStr += ',' + proxyStr
+  }
 
   const supportNoResolve = [
     RuleType.Geoip,
