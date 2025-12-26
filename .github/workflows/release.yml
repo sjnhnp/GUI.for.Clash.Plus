@@ -224,16 +224,33 @@ jobs:
                  echo "TAG_EXISTS=false" >> $GITHUB_ENV
                fi
             else
-               # Get latest tag, assume format vX.Y.Z, increment Z
-               LATEST_TAG=$(git describe --tags --match "v[0-9]*" --abbrev=0 2>/dev/null || echo "v0.0.0")
+               # Get the highest version tag by sorting all tags
+               # This ensures we find the actual latest version, not just the one closest to HEAD
+               LATEST_TAG=$(git tag -l "v[0-9]*.[0-9]*.[0-9]*" | sort -V | tail -n 1)
+               if [ -z "$LATEST_TAG" ]; then
+                 LATEST_TAG="v0.0.0"
+               fi
+               echo "Found latest tag: $LATEST_TAG"
+               
                # Remove v, split by dot
                VERSION_NO_V=${LATEST_TAG#v}
                IFS='.' read -r -a PARTS <<< "$VERSION_NO_V"
                MAJOR=${PARTS[0]}
                MINOR=${PARTS[1]}
                PATCH=${PARTS[2]}
-               NEW_PATCH=$((PATCH + 1))
-               NEW_TAG="v$MAJOR.$MINOR.$NEW_PATCH"
+               
+               # Increment and check if tag exists, keep incrementing if it does
+               while true; do
+                 NEW_PATCH=$((PATCH + 1))
+                 NEW_TAG="v$MAJOR.$MINOR.$NEW_PATCH"
+                 if git rev-parse "$NEW_TAG" >/dev/null 2>&1; then
+                   echo "Tag $NEW_TAG already exists, trying next..."
+                   PATCH=$NEW_PATCH
+                 else
+                   break
+                 fi
+               done
+               
                echo "Auto-incremented version to $NEW_TAG"
                echo "TAG_NAME=$NEW_TAG" >> $GITHUB_ENV
                echo "TAG_EXISTS=false" >> $GITHUB_ENV
