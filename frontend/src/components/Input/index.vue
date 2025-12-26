@@ -100,10 +100,10 @@ defineExpose({
   <div
     v-bind="$attrs"
     :class="{
-      border: border && (!editable || showEdit),
+      border: border && (!editable || showEdit || !modelValue),
       'auto-size': autoSize,
-      'bg-color': !editable || showEdit,
-      'is-editable': editable && !showEdit,
+      'bg-color': !editable || showEdit || !modelValue,
+      'is-editable': editable && !showEdit && !!modelValue,
       [size]: true,
       disabled,
     }"
@@ -119,6 +119,7 @@ defineExpose({
     <div
       v-if="editable && !showEdit"
       @click="showInput"
+      :class="{ 'is-placeholder': !modelValue }"
       class="w-full overflow-hidden whitespace-nowrap text-ellipsis"
     >
       <slot name="editable" v-bind="{ value: modelValue }">
@@ -183,6 +184,11 @@ defineExpose({
 .is-editable {
   min-width: 0;
   max-width: 220px;
+}
+
+.is-placeholder {
+  opacity: 0.5;
+  font-style: italic;
 }
 
 .auto-size {
