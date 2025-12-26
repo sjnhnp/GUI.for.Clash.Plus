@@ -233,5 +233,64 @@ export const restoreProfile = (
 
   // profile.advancedConfig['geodata-mode'] = isGeoModeEnabled
 
+  // Extract rule-set references from fake-ip-filter and nameserver-policy
+  // These rule-sets need to be included in rule-providers even if not used in rules
+  const ruleProviders = config['rule-providers'] || {}
+  const usedRulesets = new Set(
+    profile.rulesConfig
+      .filter(r => r.type === RuleType.RuleSet)
+      .map(r => r['ruleset-name'])
+  )
+
+  // Extract rule-set names from fake-ip-filter
+  const fakeIpFilter = profile.dnsConfig['fake-ip-filter'] || []
+  const fakeIpRulesets = fakeIpFilter.flatMap((v: string) =>
+    v.startsWith('rule-set:')
+      ? v.substring(9).split(',').map(x => x.trim())
+      : []
+  )
+
+  // Extract rule-set names from nameserver-policy
+  const nameserverPolicy = profile.dnsConfig['nameserver-policy'] || {}
+  const nameserverPolicyRulesets = Object.keys(nameserverPolicy).flatMap((key) =>
+    key.startsWith('rule-set:')
+      ? key.substring(9).split(',').map(x => x.trim())
+      : []
+  )
+
+  // Combine and dedupe
+  const dnsReferenceRulesets = Array.from(new Set([...fakeIpRulesets, ...nameserverPolicyRulesets]))
+
+  // Add rule-sets to rulesConfig if they exist in rule-providers but not in rules
+  let dnsRulesetIndex = 90000 // Use high index to avoid conflict
+  dnsReferenceRulesets.forEach((rulesetName) => {
+    if (usedRulesets.has(rulesetName)) {
+      return // Already in rulesConfig
+    }
+
+    const provider = ruleProviders[rulesetName]
+    if (!provider) {
+      return // Provider not defined
+    }
+
+    // Add a disabled RULE-SET entry so that rule-providers will be generated
+    // We use enable: true but the rule won't actually route traffic since it uses 'DIRECT'
+    // This ensures the rule-provider is generated for DNS use
+    profile.rulesConfig.push({
+      id: `dns-ruleset-${dnsRulesetIndex++}`,
+      type: RuleType.RuleSet,
+      enable: true,
+      payload: provider.type === 'inline' ? stringify(provider.payload) : provider.url,
+      proxy: 'DIRECT', // Default to DIRECT since this is for DNS filtering
+      'no-resolve': false,
+      'ruleset-behavior': provider.behavior,
+      'ruleset-format': provider.format || RulesetFormat.Yaml,
+      'ruleset-type': provider.type || 'http',
+      'ruleset-name': rulesetName,
+      'ruleset-proxy': 'DIRECT',
+      'ruleset-interval': parseInt(provider.interval) || 86400,
+    })
+  })
+
   return profile
 }
