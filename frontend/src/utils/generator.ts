@@ -292,6 +292,14 @@ export const generateConfig = async (originalProfile: ProfileType) => {
     hosts: {},
   }
 
+  // Force cleanup for MMDB mode to prevent kernel from looking for GeoIP.dat
+  if (!config['geodata-mode']) {
+    // When using MMDB mode, we should not provide a DAT download URL to avoid confusion
+    if (config['geox-url']) {
+      config['geox-url'].geoip = ''
+    }
+  }
+
   // step 1
   if (!config.dns.listen) {
     delete config.dns.listen
