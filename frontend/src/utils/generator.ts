@@ -430,11 +430,18 @@ export const generateConfig = async (originalProfile: ProfileType) => {
 
   // step 3
   const { priority, config: mixin } = originalProfile.mixinConfig
+
+  console.log('[DEBUG] Before mixin merge, rule-providers:', JSON.stringify(_config['rule-providers'], null, 2))
+  console.log('[DEBUG] Mixin rule-providers:', JSON.stringify(mixinConfig['rule-providers'], null, 2))
+  console.log('[DEBUG] Mixin priority:', priority)
+
   if (priority === 'mixin') {
     deepAssign(_config, parse(mixin))
   } else if (priority === 'gui') {
     deepAssign(_config, deepAssign(parse(mixin), _config))
   }
+
+  console.log('[DEBUG] After mixin merge, rule-providers:', JSON.stringify(_config['rule-providers'], null, 2))
 
   // step 4
   const fn = new window.AsyncFunction(
