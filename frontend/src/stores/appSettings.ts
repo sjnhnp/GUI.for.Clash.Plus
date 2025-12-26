@@ -86,6 +86,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     addGroupToMenu: false,
     pluginSettings: {},
     githubApiToken: '',
+    githubProxy: '',
     multipleInstance: false,
     rollingRelease: true,
     debugOutline: false,

@@ -660,6 +660,10 @@ export default {
       name: '向 REST API 进行身份验证',
       tips: '拥有更高的速率限制',
     },
+    githubProxy: {
+      name: 'GitHub 下载加速',
+      tips: '用于加速内核下载，留空则直连',
+    },
   },
   about: {
     new: '新版本',

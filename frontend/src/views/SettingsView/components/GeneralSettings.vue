@@ -398,6 +398,28 @@ if (envStore.env.os === 'windows') {
           </template>
         </Input>
       </div>
+      <div class="px-8 py-12 flex items-center justify-between">
+        <div class="text-16 font-bold">
+          {{ t('settings.githubProxy.name') }}
+          <span class="font-normal text-12">({{ t('settings.githubProxy.tips') }})</span>
+        </div>
+        <Input
+          v-model.lazy="appSettings.app.githubProxy"
+          :placeholder="'https://mirror.ghproxy.com'"
+          editable
+          class="text-14 min-w-256"
+        >
+          <template #suffix>
+            <Button
+              @click="appSettings.app.githubProxy = ''"
+              v-tips="'settings.userAgent.reset'"
+              type="text"
+              size="small"
+              icon="reset"
+            />
+          </template>
+        </Input>
+      </div>
     </Card>
 
     <div class="px-8 py-12 text-18 font-bold">{{ t('settings.debug') }}</div>

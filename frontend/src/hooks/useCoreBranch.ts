@@ -37,6 +37,24 @@ const AlphaUrl = 'https://api.github.com/repos/MetaCubeX/mihomo/releases/tags/Pr
 const StablePage = 'https://github.com/MetaCubeX/mihomo/releases/latest'
 const AlphaPage = 'https://github.com/MetaCubeX/mihomo/releases/tag/Prerelease-Alpha'
 
+// Apply GitHub proxy to a URL
+const applyGitHubProxy = (url: string, proxyUrl: string): string => {
+  if (!proxyUrl) return url
+  // Remove trailing slash from proxy URL
+  const proxy = proxyUrl.replace(/\/$/, '')
+  // For ghproxy-style proxies, prepend the proxy URL
+  if (proxy.includes('ghproxy') || proxy.includes('gh.api') || proxy.includes('github')) {
+    return `${proxy}/${url}`
+  }
+  // For jsdelivr, convert to gh format (only works for repo files, not releases)
+  if (proxy.includes('jsdelivr')) {
+    // jsdelivr doesn't support release assets, fall back to ghproxy style
+    return `${proxy}/${url}`
+  }
+  // Default: prepend proxy URL
+  return `${proxy}/${url}`
+}
+
 export const useCoreBranch = (isAlpha = false) => {
   const releaseUrl = isAlpha ? AlphaUrl : StableUrl
 
@@ -100,7 +118,7 @@ export const useCoreBranch = (isAlpha = false) => {
       await MakeDir(CoreWorkingDirectory)
 
       await Download(
-        asset.browser_download_url,
+        applyGitHubProxy(asset.browser_download_url, appSettings.app.githubProxy || ''),
         downloadCacheFile,
         undefined,
         (progress, total) => {
@@ -158,8 +176,9 @@ export const useCoreBranch = (isAlpha = false) => {
     remoteVersionLoading.value = true
     try {
       if (isAlpha) {
+        const versionUrl = 'https://github.com/MetaCubeX/mihomo/releases/download/Prerelease-Alpha/version.txt'
         const { body } = await HttpGet(
-          'https://github.com/MetaCubeX/mihomo/releases/download/Prerelease-Alpha/version.txt',
+          applyGitHubProxy(versionUrl, appSettings.app.githubProxy || ''),
         )
         return body.trim()
       }
