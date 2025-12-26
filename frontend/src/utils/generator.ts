@@ -218,11 +218,17 @@ const generateRuleProviders = async (
   dns: ProfileType['dnsConfig'],
   rules: ProfileType['rulesConfig'],
   proxyGruoups: ProfileType['proxyGroupsConfig'],
+  mixinRuleProviders: Record<string, any> = {},
 ) => {
   const rulesetsStore = useRulesetsStore()
   const providers: Record<string, any> = {}
 
   function appendLocalProvider(name: string) {
+    // If already defined in mixin rule-providers, skip - mixin will provide it
+    if (mixinRuleProviders[name]) {
+      return
+    }
+
     const ruleset = rulesetsStore.getRulesetById(name) || rulesetsStore.getRulesetByName(name)
     if (ruleset) {
       if (ruleset.type === 'Http') {
@@ -272,14 +278,24 @@ const generateRuleProviders = async (
       }
     })
 
-  const l1 = dns['fake-ip-filter'].flatMap((v) =>
+  // Extract rule-set references from GUI's DNS config
+  const l1 = (dns['fake-ip-filter'] || []).flatMap((v: string) =>
     v.startsWith('rule-set:') ? v.substring(9).split(',') : [],
   )
-  const l2 = Object.keys(dns['nameserver-policy']).flatMap((key) =>
+  const l2 = Object.keys(dns['nameserver-policy'] || {}).flatMap((key) =>
     key.startsWith('rule-set:') ? key.substring(9).split(',') : [],
   )
 
-  l1.concat(l2).forEach((name) => appendLocalProvider(name))
+  // Also extract rule-set references from mixin's DNS config
+  const mixinDns = (mixinRuleProviders as any).__mixinDns || {}
+  const l3 = (mixinDns['fake-ip-filter'] || []).flatMap((v: string) =>
+    v.startsWith('rule-set:') ? v.substring(9).split(',') : [],
+  )
+  const l4 = Object.keys(mixinDns['nameserver-policy'] || {}).flatMap((key) =>
+    key.startsWith('rule-set:') ? key.substring(9).split(',') : [],
+  )
+
+  l1.concat(l2, l3, l4).forEach((name) => appendLocalProvider(name))
 
   return providers
 }
@@ -365,10 +381,18 @@ export const generateConfig = async (originalProfile: ProfileType) => {
 
   config['proxy-providers'] = await generateProxyProviders(profile.proxyGroupsConfig)
 
+  // Parse mixin config to extract rule-providers defined in mixin
+  // This allows generateRuleProviders to skip generating providers that will be provided by mixin
+  const mixinConfig = originalProfile.mixinConfig.config ? parse(originalProfile.mixinConfig.config) : {}
+  const mixinRuleProviders = mixinConfig['rule-providers'] || {}
+    // Attach mixin's dns config for extracting rule-set references
+    ; (mixinRuleProviders as any).__mixinDns = mixinConfig['dns'] || {}
+
   config['rule-providers'] = await generateRuleProviders(
     profile.dnsConfig,
     profile.rulesConfig,
     profile.proxyGroupsConfig,
+    mixinRuleProviders,
   )
 
   config['proxies'] = await generateProxies(profile.proxyGroupsConfig)
