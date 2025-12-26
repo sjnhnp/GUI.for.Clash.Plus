@@ -7,16 +7,17 @@
 
 ## ✨ Fork 增强功能
 
-### 🔧 Bug 修复
+### 🔧 Bug 修复（mihomo 支持但原版 GUI 不支持的配置）
 
-| 修复项 | 说明 |
-|--------|------|
-| **SUB-RULE 语法支持** | 正确支持 Clash Mihomo SUB-RULE 语法，修复"策略组不存在"警告 |
-| **自定义 GeoIP 配置** | 修复 `geodata-mode: false` 时 GeoIP 配置不生效的问题 |
-| **FakeIP Filter 规则集** | 修复 `fake-ip-filter` 中使用 `rule-set` 时内核报错的问题 |
-| **Mixin 规则集** | 在 mixin 中定义的规则集现在会正确复制到生成的配置中 |
-| **DNS 规则集显示** | 仅用于 DNS 的规则集不再错误显示在 GUI 规则列表中 |
-| **本地订阅恢复** | 本地订阅导入后配置能正确恢复 |
+| 修复项 | 问题描述 | 修复说明 |
+|--------|----------|----------|
+| **SUB-RULE 嵌套规则** | 原 GUI 不支持 SUB-RULE 语法，显示"策略组不存在"警告 | 完整支持 mihomo `SUB-RULE` 嵌套规则语法，包括 `AND`, `OR`, `NOT` 等复杂条件 |
+| **自定义 GeoIP 配置** | `geodata-mode: false` 时使用 `mmdb` 格式，GUI 不识别 | 修复 GeoIP 配置读取逻辑，支持自定义 `geox-url` 下载 mmdb 文件 |
+| **FakeIP Filter 规则集** | `fake-ip-filter` 中引用 `rule-set:xxx` 导致内核报错 | 自动将 DNS 配置中引用的规则集添加到 `rule-providers` |
+| **Nameserver-Policy 数组格式** | `nameserver-policy` 的值原 GUI 只支持字符串 `"ip1,ip2"`，不支持数组 `[ip1, ip2]` | 支持 YAML 数组格式，如 `- system://` 和 `- 223.5.5.5` |
+| **Mixin 规则集引用** | Mixin 中定义的规则集在 `fake-ip-filter` / `nameserver-policy` 中引用时未被包含 | 自动复制 mixin 中的规则集定义到生成的配置 |
+| **DNS 规则集显示** | 仅用于 DNS 的规则集错误显示在 GUI 规则列表中 | 区分 DNS 规则集和路由规则集，仅显示路由规则 |
+| **本地订阅恢复** | 本地订阅导入后配置无法正确恢复 | 修复本地订阅文件的备份和恢复逻辑 |
 
 ### 🔌 预装增强版 Gists 同步插件
 
