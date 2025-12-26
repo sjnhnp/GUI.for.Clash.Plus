@@ -19,6 +19,57 @@ import {
 
 import type { Plugin, Subscription, TrayContent, MenuItem } from '@/types/app'
 
+// Pre-installed plugins configuration
+const PreinstalledPlugins: Plugin[] = [
+  {
+    id: 'plugin-sync-configuration-gists',
+    name: '配置同步 - Gists',
+    version: 'v1.0.2',
+    description: '使用Gists同步GUI配置。',
+    tags: ['实用工具', '功能扩展', '提升体验'],
+    type: 'Http',
+    url: 'https://raw.githubusercontent.com/GUI-for-Cores/Plugin-Hub/main/plugins/Generic/plugin-sync-configuration-gists.js',
+    path: 'data/plugins/plugin-sync-configuration-gists.js',
+    triggers: ['on::manual', 'on::ready'] as PluginTrigger[],
+    hasUI: false,
+    menus: {
+      '立即备份': 'Backup',
+      '同步至本地': 'Sync',
+    },
+    context: {
+      profiles: {},
+      subscriptions: {},
+      rulesets: {},
+      plugins: {},
+      scheduledtasks: {},
+    },
+    status: 0,
+    configuration: [
+      {
+        id: 'ID_u3272842',
+        title: 'TOKEN',
+        description: '拥有Gists访问权限的 token',
+        key: 'Authorization',
+        component: 'Input',
+        value: '',
+        options: [],
+      },
+      {
+        id: 'ID_imjlb4rx',
+        title: '密钥',
+        description: '加密、解密使用的密钥',
+        key: 'Secret',
+        component: 'Input',
+        value: '',
+        options: [],
+      },
+    ],
+    disabled: false,
+    install: true,
+    installed: false,
+  },
+]
+
 const PluginsCache: Recordable<{ plugin: Plugin; code: string }> = {}
 
 const PluginsTriggerMap: {
@@ -85,6 +136,47 @@ export const usePluginsStore = defineStore('plugins', () => {
 
     const list = await ignoredError(ReadFile, PluginHubFilePath)
     list && (pluginHub.value = JSON.parse(list))
+
+    // Install pre-installed plugins if no plugins exist
+    if (plugins.value.length === 0 && PreinstalledPlugins.length > 0) {
+      console.log('Installing pre-installed plugins...')
+      for (const prePlugin of PreinstalledPlugins) {
+        try {
+          // Clone the plugin to avoid modifying the original
+          const plugin = deepClone(prePlugin)
+          plugins.value.push(plugin)
+
+          // Download the plugin code
+          if (plugin.type === 'Http' && plugin.url) {
+            const { body } = await HttpGet<string>(plugin.url)
+            await WriteFile(plugin.path, body)
+            PluginsCache[plugin.id] = { plugin, code: body }
+            console.log(`Pre-installed plugin: ${plugin.name}`)
+
+            // For sync-configuration-gists plugin, download crypto-js dependency and mark as installed
+            if (plugin.id === 'plugin-sync-configuration-gists') {
+              try {
+                const cryptoJsPath = 'data/third/sync-gui-gists/crypto-js.js'
+                const { body: cryptoJs } = await HttpGet<string>(
+                  'https://unpkg.com/crypto-js@latest/crypto-js.js',
+                )
+                await WriteFile(cryptoJsPath, cryptoJs)
+                plugin.installed = true
+                console.log('Downloaded crypto-js.js for sync-configuration-gists plugin')
+              } catch (depError) {
+                console.warn('Failed to download crypto-js.js, user will need to install manually', depError)
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to install pre-installed plugin: ${prePlugin.name}`, error)
+        }
+      }
+      // Save the plugins list
+      if (plugins.value.length > 0) {
+        await savePlugins()
+      }
+    }
 
     for (const plugin of plugins.value) {
       const { id, triggers, path } = plugin
