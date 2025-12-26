@@ -100,7 +100,7 @@ defineExpose({
   <div
     v-bind="$attrs"
     :class="{
-      border: border && (!editable || showEdit || !modelValue),
+      border: border && (!editable || showEdit),
       'auto-size': autoSize,
       'bg-color': !editable || showEdit || !modelValue,
       'is-editable': editable && !showEdit && !!modelValue,
