@@ -133,7 +133,6 @@ const { t } = useI18n()
     {{ t('kernel.geodata-mode') }}
     <Switch v-model="fields['geodata-mode']" />
   </div>
-  <template v-if="fields['geodata-mode']">
     <div class="form-item">
       {{ t('kernel.geodata-loader') }}
       <Radio v-model="fields['geodata-loader']" :options="GeodataLoaderOptions" />
@@ -173,7 +172,6 @@ const { t } = useI18n()
       {{ t('kernel.geox-url.asn') }}
       <Input v-model="fields['geox-url']['asn']" editable />
     </div>
-  </template>
 
   <div class="form-item">
     {{ t('kernel.global-ua') }}

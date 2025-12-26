@@ -372,9 +372,7 @@ export const generateConfig = async (originalProfile: ProfileType) => {
         if (type === RuleType.InsertionPoint || !enable) {
           return false
         }
-        return (
-          profile.advancedConfig['geodata-mode'] || ![RuleType.Geosite, RuleType.Geoip].includes(type)
-        )
+        return true
       })
       .map((rule) => generateRule(rule, profile.proxyGroupsConfig)),
   ]
