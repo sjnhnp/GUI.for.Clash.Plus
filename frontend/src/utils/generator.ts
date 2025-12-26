@@ -280,19 +280,39 @@ const generateRuleProviders = async (
 
   // Extract rule-set references from GUI's DNS config
   const l1 = (dns['fake-ip-filter'] || []).flatMap((v: string) =>
-    v.startsWith('rule-set:') ? v.substring(9).split(',') : [],
+    v.startsWith('rule-set:')
+      ? v
+        .substring(9)
+        .split(',')
+        .map((v) => v.trim())
+      : [],
   )
   const l2 = Object.keys(dns['nameserver-policy'] || {}).flatMap((key) =>
-    key.startsWith('rule-set:') ? key.substring(9).split(',') : [],
+    key.startsWith('rule-set:')
+      ? key
+        .substring(9)
+        .split(',')
+        .map((v) => v.trim())
+      : [],
   )
 
   // Also extract rule-set references from mixin's DNS config
   const mixinDns = (mixinRuleProviders as any).__mixinDns || {}
   const l3 = (mixinDns['fake-ip-filter'] || []).flatMap((v: string) =>
-    v.startsWith('rule-set:') ? v.substring(9).split(',') : [],
+    v.startsWith('rule-set:')
+      ? v
+        .substring(9)
+        .split(',')
+        .map((v) => v.trim())
+      : [],
   )
   const l4 = Object.keys(mixinDns['nameserver-policy'] || {}).flatMap((key) =>
-    key.startsWith('rule-set:') ? key.substring(9).split(',') : [],
+    key.startsWith('rule-set:')
+      ? key
+        .substring(9)
+        .split(',')
+        .map((v) => v.trim())
+      : [],
   )
 
   l1.concat(l2, l3, l4).forEach((name) => appendLocalProvider(name))
@@ -374,7 +394,7 @@ export const generateConfig = async (originalProfile: ProfileType) => {
         ? v
           .substring(9)
           .split(',')
-          .map((x) => `rule-set:${x}`)
+          .map((x) => `rule-set:${x.trim()}`)
         : [v],
     )
   }
