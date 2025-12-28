@@ -88,8 +88,8 @@ export const useCoreBranch = (isAlpha = false) => {
       })
       if (body.message) throw body.message
 
-      const { assets, name } = body
-      const assetName = getKernelAssetFileName(isAlpha ? remoteVersion.value : name, cpuLevel)
+      const { assets, tag_name } = body
+      const assetName = getKernelAssetFileName(isAlpha ? remoteVersion.value : tag_name, cpuLevel)
       const asset = assets.find((v: any) => v.name === assetName)
       if (!asset) throw 'Asset Not Found:' + assetName
       if (asset.uploader.type !== 'Bot') {
@@ -177,7 +177,7 @@ export const useCoreBranch = (isAlpha = false) => {
         Authorization: getGitHubApiAuthorization(),
       })
       if (body.message) throw body.message
-      return body.name
+      return body.tag_name
     } catch (error: any) {
       console.log(error)
       showTips && message.error(error.message)

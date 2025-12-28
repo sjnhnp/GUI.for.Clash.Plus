@@ -41,6 +41,8 @@ type AppSettings = {
   lang: Lang | string
   theme: Theme
   color: Color
+  primaryColor: string
+  secondaryColor: string
   fontFamily: string
   profilesView: View
   subscribesView: View
@@ -94,6 +96,7 @@ type AppSettings = {
   rollingRelease: boolean
   debugOutline: boolean
   debugNoAnimation: boolean
+  debugNoRounded: boolean
   debugBorder: boolean
   pages: string[]
 }
