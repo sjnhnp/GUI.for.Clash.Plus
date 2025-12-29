@@ -50,6 +50,40 @@ export const debounce = (fn: (...args: any) => any, wait: number) => {
   return _debuonce
 }
 
+export const throttle = <T extends (...args: any[]) => any>(fn: T, wait: number) => {
+  let lastTime = 0
+  let timer: number | null = null
+
+  const _throttle = function (...args: Parameters<T>) {
+    const now = Date.now()
+    const remaining = wait - (now - lastTime)
+
+    if (remaining <= 0) {
+      if (timer) {
+        clearTimeout(timer)
+        timer = null
+      }
+      lastTime = now
+      fn(...args)
+    } else if (!timer) {
+      timer = setTimeout(() => {
+        lastTime = Date.now()
+        timer = null
+        fn(...args)
+      }, remaining)
+    }
+  }
+
+  _throttle.cancel = function () {
+    if (timer) {
+      clearTimeout(timer)
+      timer = null
+    }
+  }
+
+  return _throttle
+}
+
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 export const ignoredError = async <F extends (...args: any[]) => Promise<any>>(

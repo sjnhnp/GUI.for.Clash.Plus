@@ -613,6 +613,11 @@ export default {
       name: '相关配置变化时自动重启核心',
       tips: '会中断所有连接，且可能重启失败',
     },
+    restartKernelAfterResume: {
+      name: '休眠唤醒后自动重启核心',
+      tips: '系统从休眠恢复后自动重启，解决网络中断问题',
+      restarted: '休眠唤醒后内核已自动重启',
+    },
     admin: '以管理员身份运行',
     addPluginToMenu: '将插件添加到托盘菜单',
     addGroupToMenu: '将代理组添加到托盘菜单',

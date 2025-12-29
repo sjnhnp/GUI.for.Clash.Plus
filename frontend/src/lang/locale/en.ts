@@ -614,6 +614,11 @@ export default {
       name: 'Auto-restart core on config changes',
       tips: 'It will interrupt all connections and may fail to restart',
     },
+    restartKernelAfterResume: {
+      name: 'Restart core after system resume',
+      tips: 'Auto-restart after waking from hibernation',
+      restarted: 'Core restarted after system resume',
+    },
     admin: 'Run as admin',
     addPluginToMenu: 'Add plugin to tray menu',
     addGroupToMenu: 'Add proxy group to tray menu',

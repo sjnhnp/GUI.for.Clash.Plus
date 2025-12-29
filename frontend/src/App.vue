@@ -63,6 +63,25 @@ EventsOn('onBeforeExitApp', async () => {
 
 EventsOn('onExitApp', () => exitApp())
 
+// Handle system resume from hibernation/sleep (Windows only)
+EventsOn('onSystemResume', async (resumeType: string) => {
+  console.log('System resumed from:', resumeType)
+  
+  // Only restart kernel if the setting is enabled and kernel is running
+  if (appSettings.app.restartKernelAfterResume && kernelApiStore.running) {
+    console.log('Auto-restarting kernel after system resume...')
+    // Add a small delay to allow system to fully initialize network
+    await sleep(2000)
+    try {
+      await kernelApiStore.restartCore()
+      message.success('settings.restartKernelAfterResume.restarted')
+    } catch (e: any) {
+      console.error('Failed to restart kernel after resume:', e)
+      message.error(e.message || e)
+    }
+  }
+})
+
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     const closeFn = appStore.modalStack.at(-1)

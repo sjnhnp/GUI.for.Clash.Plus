@@ -144,6 +144,13 @@ if (envStore.env.os === 'windows') {
       <div class="text-16 font-bold">{{ $t('settings.closeKernelOnExit') }}</div>
       <Switch v-model="appSettings.app.closeKernelOnExit" />
     </div>
+    <div v-platform="['windows']" class="px-8 py-12 flex items-center justify-between">
+      <div class="text-16 font-bold">
+        {{ $t('settings.restartKernelAfterResume.name') }}
+        <span class="font-normal text-12">({{ $t('settings.restartKernelAfterResume.tips') }})</span>
+      </div>
+      <Switch v-model="appSettings.app.restartKernelAfterResume" />
+    </div>
     <div v-platform="['linux']" class="px-8 py-12 flex items-center justify-between">
       <div class="text-16 font-bold">
         {{ $t('settings.webviewGpuPolicy.name') }}

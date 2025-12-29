@@ -65,6 +65,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     proxyBypassList: '',
     autoStartKernel: false,
     autoRestartKernel: false,
+    restartKernelAfterResume: true, // Restart kernel after system resume from hibernation
     userAgent: '',
     startupDelay: 30,
     connections: DefaultConnections(),
@@ -182,9 +183,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
         : settings.theme
     let primary, secondary
     if (settings.color === Color.Custom) {
-      ;({ primaryColor: primary, secondaryColor: secondary } = settings)
+      ; ({ primaryColor: primary, secondaryColor: secondary } = settings)
     } else {
-      ;({ primary, secondary } = Colors[settings.color] ?? { primary: '', secondary: '' })
+      ; ({ primary, secondary } = Colors[settings.color] ?? { primary: '', secondary: '' })
     }
     document.documentElement.style.setProperty('--primary-color', primary)
     document.documentElement.style.setProperty('--secondary-color', secondary)
