@@ -39,18 +39,20 @@ jobs:
             if [ ! -z "$INPUT_VER" ]; then
               echo "VERSION=$INPUT_VER" >> $GITHUB_ENV
             else
-              # Get the highest version tag by sorting all tags (with or without v prefix)
-              # First, get all version-like tags and normalize them
-              LATEST_TAG=$(git tag -l | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sed 's/^v//' | sort -V | tail -n 1)
+              # Get the most recently created version tag (by creation date, not version number)
+              # This ensures we increment from the last released version, not the highest version
+              LATEST_TAG=$(git for-each-ref --sort=-creatordate --format='%(refname:short)' refs/tags | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
               if [ -z "$LATEST_TAG" ]; then
-                LATEST_TAG="0.0.0"
+                LATEST_TAG="v0.0.0"
               fi
-              echo "Found latest version: $LATEST_TAG"
-              IFS='.' read -r -a PARTS <<< "$LATEST_TAG"
+              # Remove v prefix if present for parsing
+              VERSION_NUM=$(echo "$LATEST_TAG" | sed 's/^v//')
+              echo "Found latest tag (by date): $LATEST_TAG (version: $VERSION_NUM)"
+              IFS='.' read -r -a PARTS <<< "$VERSION_NUM"
               MAJOR=${PARTS[0]}
               MINOR=${PARTS[1]}
               PATCH=${PARTS[2]}
-              # Just increment by 1 from the latest tag
+              # Increment patch version
               NEW_PATCH=$((PATCH + 1))
               NEW_TAG="v$MAJOR.$MINOR.$NEW_PATCH"
               echo "Auto-incremented version to $NEW_TAG"
@@ -99,20 +101,19 @@ jobs:
             if ($inputVer) {
               "VERSION=$inputVer" | Out-File -FilePath $env:GITHUB_ENV -Append
             } else {
-              # Get all version-like tags (with or without v prefix)
-              $allTags = git tag -l | Where-Object { $_ -match '^v?\d+\.\d+\.\d+$' }
-              if ($allTags) {
-                # Normalize by removing v prefix and sort
-                $latestVersion = $allTags | ForEach-Object { $_ -replace '^v', '' } | Sort-Object { [version]$_ } | Select-Object -Last 1
-              } else {
-                $latestVersion = "0.0.0"
+              # Get the most recently created version tag (by creation date, not version number)
+              $latestTag = git for-each-ref --sort=-creatordate --format='%(refname:short)' refs/tags | Where-Object { $_ -match '^v?\d+\.\d+\.\d+$' } | Select-Object -First 1
+              if (-not $latestTag) {
+                $latestTag = "v0.0.0"
               }
-              Write-Host "Found latest version: $latestVersion"
-              $versionParts = $latestVersion -split '\.'
+              # Remove v prefix if present
+              $versionNum = $latestTag -replace '^v', ''
+              Write-Host "Found latest tag (by date): $latestTag (version: $versionNum)"
+              $versionParts = $versionNum -split '\.'
               $major = $versionParts[0]
               $minor = $versionParts[1]
               $patch = [int]$versionParts[2]
-              # Just increment by 1 from the latest version
+              # Increment patch version
               $patch++
               $newTag = "v$major.$minor.$patch"
               Write-Host "Auto-incremented version to $newTag"
@@ -180,17 +181,19 @@ jobs:
             if [ ! -z "$INPUT_VER" ]; then
               echo "VERSION=$INPUT_VER" >> $GITHUB_ENV
             else
-              # Get the highest version tag by sorting all tags (with or without v prefix)
-              LATEST_TAG=$(git tag -l | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sed 's/^v//' | sort -V | tail -n 1)
+              # Get the most recently created version tag (by creation date, not version number)
+              LATEST_TAG=$(git for-each-ref --sort=-creatordate --format='%(refname:short)' refs/tags | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
               if [ -z "$LATEST_TAG" ]; then
-                LATEST_TAG="0.0.0"
+                LATEST_TAG="v0.0.0"
               fi
-              echo "Found latest version: $LATEST_TAG"
-              IFS='.' read -r -a PARTS <<< "$LATEST_TAG"
+              # Remove v prefix if present for parsing
+              VERSION_NUM=$(echo "$LATEST_TAG" | sed 's/^v//')
+              echo "Found latest tag (by date): $LATEST_TAG (version: $VERSION_NUM)"
+              IFS='.' read -r -a PARTS <<< "$VERSION_NUM"
               MAJOR=${PARTS[0]}
               MINOR=${PARTS[1]}
               PATCH=${PARTS[2]}
-              # Just increment by 1 from the latest tag
+              # Increment patch version
               NEW_PATCH=$((PATCH + 1))
               NEW_TAG="v$MAJOR.$MINOR.$NEW_PATCH"
               echo "Auto-incremented version to $NEW_TAG"
@@ -245,19 +248,21 @@ jobs:
                  echo "TAG_EXISTS=false" >> $GITHUB_ENV
                fi
             else
-               # Get the highest version tag by sorting all tags (with or without v prefix)
-               LATEST_TAG=$(git tag -l | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sed 's/^v//' | sort -V | tail -n 1)
+               # Get the most recently created version tag (by creation date, not version number)
+               LATEST_TAG=$(git for-each-ref --sort=-creatordate --format='%(refname:short)' refs/tags | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
                if [ -z "$LATEST_TAG" ]; then
-                 LATEST_TAG="0.0.0"
+                 LATEST_TAG="v0.0.0"
                fi
-               echo "Found latest version: $LATEST_TAG"
+               # Remove v prefix if present for parsing
+               VERSION_NUM=$(echo "$LATEST_TAG" | sed 's/^v//')
+               echo "Found latest tag (by date): $LATEST_TAG (version: $VERSION_NUM)"
                
-               IFS='.' read -r -a PARTS <<< "$LATEST_TAG"
+               IFS='.' read -r -a PARTS <<< "$VERSION_NUM"
                MAJOR=${PARTS[0]}
                MINOR=${PARTS[1]}
                PATCH=${PARTS[2]}
                
-               # Just increment by 1 from the latest tag
+               # Increment patch version
                NEW_PATCH=$((PATCH + 1))
                NEW_TAG="v$MAJOR.$MINOR.$NEW_PATCH"
                
