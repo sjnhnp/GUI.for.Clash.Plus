@@ -106,13 +106,15 @@ func (a *App) StartPowerMonitor() {
 		windowName, _ := syscall.UTF16PtrFromString("GFC Power Monitor Window")
 
 		// Create a message-only window (HWND_MESSAGE parent)
+		// Use ^uintptr(2) for cross-platform compatibility (works on both 32-bit and 64-bit)
+		// This equals -3 (HWND_MESSAGE) regardless of pointer size
 		hwnd, _, err := procCreateWindowExW.Call(
 			0,
 			uintptr(unsafe.Pointer(className)),
 			uintptr(unsafe.Pointer(windowName)),
 			0,
 			0, 0, 0, 0,
-			uintptr(0xFFFFFFFFFFFFFFFD), // HWND_MESSAGE (-3) for message-only window
+			^uintptr(2), // HWND_MESSAGE (-3) for message-only window
 			0, 0, 0,
 		)
 		if hwnd == 0 {
