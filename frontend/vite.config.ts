@@ -17,23 +17,10 @@ export default defineConfig({
   build: {
     assetsInlineLimit: 100 * 1024, // 100KB
     chunkSizeWarningLimit: 4096, // 4MB
-    // Production optimizations
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,  // Remove console.log in production
-        drop_debugger: true, // Remove debugger statements
-      },
-    },
-    rollupOptions: {
-      output: {
-        // Code splitting for better caching
-        manualChunks: {
-          'vendor-vue': ['vue', 'vue-router', 'pinia', 'vue-i18n'],
-          'vendor-yaml': ['yaml'],
-        },
-      },
-    },
+  },
+  esbuild: {
+    // Production optimizations: remove console.log and debugger in production
+    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
   },
 })
 
