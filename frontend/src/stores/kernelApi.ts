@@ -223,6 +223,8 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
       longLivedWS.setup?.()
       await Promise.all([refreshConfig(), refreshProviderProxies()])
       await envStore.updateSystemProxyStatus()
+      // Trigger onCoreStarted for plugins when kernel is already running at app startup
+      await pluginsStore.onCoreStartedTrigger()
     } else if (appSettingsStore.app.autoStartKernel) {
       await startCore()
     }
@@ -337,9 +339,9 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
 
   const getProxyPort = ():
     | {
-        port: number
-        proxyType: ProxyType
-      }
+      port: number
+      proxyType: ProxyType
+    }
     | undefined => {
     const { port, 'socks-port': socksPort, 'mixed-port': mixedPort } = config.value
 
