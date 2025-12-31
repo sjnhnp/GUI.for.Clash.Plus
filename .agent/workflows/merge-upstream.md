@@ -37,11 +37,16 @@ description: 合并上游 GUI.for.Clash 项目的更新，同时保留所有自�
    - 文件: `frontend/public/plugins/plugin-sync-configuration-gists-enhanced.js`
    - 文件: `frontend/public/plugins/crypto-js.js`
 
-5. **GitHub Actions 自定义构建**
+5. **自定义插件仓库**
+   - 文件: `frontend/src/stores/plugins.ts` (添加第三方插件源加载)
+   - 文件: `plugins/custom.json` (自定义插件列表)
+   - 文件: `plugins/plugin-clash-api-dashboard-fixed.js` (修复版面板插件)
+
+6. **GitHub Actions 自定义构建**
    - 文件: `.github/workflows/release.yml`
    - 文件: `.github/workflows/rolling-release.yml`
 
-6. **Windows 休眠/唤醒后自动重启内核** (`onSystemResume`)
+7. **Windows 休眠/唤醒后自动重启内核** (`onSystemResume`)
    - 文件: `bridge/power_windows.go` - Windows 电源事件监听
    - 文件: `bridge/power_others.go` - 非 Windows 平台占位
    - 文件: `frontend/src/App.vue` - 前端事件处理
@@ -51,19 +56,19 @@ description: 合并上游 GUI.for.Clash 项目的更新，同时保留所有自�
    - 文件: `frontend/src/lang/locale/zh.ts`, `en.ts` - 翻译
    - 文件: `main.go` - 启动电源监听
 
-7. **性能优化**
+8. **性能优化**
    - 虚拟滚动: `frontend/src/components/Table/index.vue`
    - shallowRef 优化: `frontend/src/views/HomeView/components/ConnectionsController.vue`
    - WebSocket 节流: `frontend/src/views/HomeView/components/GroupsController.vue`
 
-8. **构建兼容性修复**
+9. **构建兼容性修复**
    - Rolldown-Vite 兼容: `frontend/vite.config.ts`
    - 32位 Windows 溢出修复: `bridge/power_windows.go`
 
-9. **版本自动递增逻辑**
+10. **版本自动递增逻辑**
    - 基于最近创建的 tag 递增: `.github/workflows/release.yml`
 
-10. **GFC Plus 品牌重命名**
+11. **GFC Plus 品牌重命名**
     - 应用标题: `frontend/.env` (VITE_APP_TITLE, VITE_APP_NAME)
     - 类型定义: `frontend/env.d.ts` (VITE_APP_NAME)
     - 环境变量导出: `frontend/src/utils/env.ts` (APP_NAME)
@@ -73,11 +78,11 @@ description: 合并上游 GUI.for.Clash 项目的更新，同时保留所有自�
     - Gist 插件识别: `frontend/public/plugins/plugin-sync-configuration-gists-enhanced.js`
     - 构建输出文件名: `.github/workflows/release.yml`
 
-11. **订阅更新全部错误提示改进**
+12. **订阅更新全部错误提示改进**
     - 文件: `frontend/src/stores/subscribes.ts` (返回所有结果含失败信息)
     - 文件: `frontend/src/views/SubscribesView/index.vue` (显示失败的订阅错误)
 
-12. **其他自定义**
+13. **其他自定义**
     - 关于页面版本号修改: `frontend/src/views/AboutView.vue`
     - Go 后端修改: `bridge/bridge.go`, `bridge/io.go`
     - Windows 管理员权限: `build/windows/wails.exe.manifest`

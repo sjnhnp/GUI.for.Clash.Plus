@@ -1,0 +1,106 @@
+[
+  {
+    "id": "plugin-sync-gists-enhanced",
+    "name": "配置同步 - Gists (增强版)",
+    "version": "v1.1.0",
+    "description": "使用Gists同步GUI配置。增强版支持备份本地订阅源文件和本地规则集源文件。",
+    "tags": [
+      "实用工具",
+      "功能扩展",
+      "提升体验"
+    ],
+    "type": "Http",
+    "url": "https://raw.githubusercontent.com/sjnhnp/gfc/main/frontend/public/plugins/plugin-sync-configuration-gists-enhanced.js",
+    "path": "data/plugins/plugin-sync-gists-enhanced.js",
+    "triggers": [
+      "on::manual",
+      "on::ready"
+    ],
+    "hasUI": false,
+    "menus": {
+      "立即备份": "Backup",
+      "同步至本地": "Sync"
+    },
+    "context": {
+      "profiles": {},
+      "subscriptions": {},
+      "rulesets": {},
+      "plugins": {},
+      "scheduledtasks": {}
+    },
+    "status": 0,
+    "configuration": [
+      {
+        "id": "ID_u3272842",
+        "title": "TOKEN",
+        "description": "拥有Gists访问权限的 token",
+        "key": "Authorization",
+        "component": "Input",
+        "value": "",
+        "options": []
+      },
+      {
+        "id": "ID_imjlb4rx",
+        "title": "密钥",
+        "description": "加密、解密使用的密钥",
+        "key": "Secret",
+        "component": "Input",
+        "value": "",
+        "options": []
+      }
+    ],
+    "disabled": false,
+    "install": true,
+    "installed": false
+  },
+  {
+    "id": "plugin-clash-api-dashboard-fixed",
+    "name": "Clash API 仪表板 (修复版)",
+    "version": "v1.0.1",
+    "description": "方便的切换和访问 Clash 面板。修复版：添加 onConfigure 支持，配置更改后立即生效，无需重启内核。",
+    "tags": [
+      "实用工具",
+      "功能扩展",
+      "修复版"
+    ],
+    "type": "Http",
+    "url": "https://raw.githubusercontent.com/sjnhnp/gfc/main/plugins/plugin-clash-api-dashboard-fixed.js",
+    "path": "data/plugins/plugin-clash-api-dashboard-fixed.js",
+    "triggers": [
+      "on::manual",
+      "on::core::started",
+      "on::core::stopped"
+    ],
+    "hasUI": true,
+    "menus": {},
+    "context": {},
+    "status": 0,
+    "configuration": [
+      {
+        "id": "ID_dashboard",
+        "title": "选择仪表板",
+        "description": "选择默认打开的仪表板",
+        "key": "DashboardName",
+        "component": "Radio",
+        "value": "Yacd",
+        "options": [
+          "Yacd",
+          "Zashboard",
+          "MetaCubeXD"
+        ]
+      },
+      {
+        "id": "ID_clashmode",
+        "title": "Clash Mode 操作",
+        "description": "概览页添加 Clash Mode 切换按钮",
+        "key": "ClashModeAction",
+        "component": "Switch",
+        "value": false,
+        "options": []
+      }
+    ],
+    "disabled": false,
+    "install": false,
+    "installed": false
+  }
+]

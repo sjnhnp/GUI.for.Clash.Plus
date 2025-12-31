@@ -202,7 +202,17 @@ export const usePluginsStore = defineStore('plugins', () => {
           const { body: body2 } = await HttpGet<string>(
             'https://raw.githubusercontent.com/GUI-for-Cores/Plugin-Hub/main/plugins/gfc.json',
           )
-          pluginHub.value = [...JSON.parse(body1), ...JSON.parse(body2)]
+          // Load custom plugin repository (optional, won't block if failed)
+          let customPlugins: any[] = []
+          try {
+            const { body: body3 } = await HttpGet<string>(
+              'https://raw.githubusercontent.com/sjnhnp/gfc/main/plugins/custom.json',
+            )
+            customPlugins = JSON.parse(body3)
+          } catch (err) {
+            console.warn('Failed to load custom plugin repository:', err)
+          }
+          pluginHub.value = [...JSON.parse(body1), ...JSON.parse(body2), ...customPlugins]
           await WriteFile(PluginHubFilePath, JSON.stringify(pluginHub.value))
           console.log('Plugin-Hub list loaded in background')
         }).catch((err) => console.warn('Failed to load Plugin-Hub in background:', err))
@@ -441,7 +451,17 @@ export const usePluginsStore = defineStore('plugins', () => {
       const { body: body2 } = await HttpGet<string>(
         'https://raw.githubusercontent.com/GUI-for-Cores/Plugin-Hub/main/plugins/gfc.json',
       )
-      pluginHub.value = [...JSON.parse(body1), ...JSON.parse(body2)]
+      // Load custom plugin repository (optional, won't block if failed)
+      let customPlugins: any[] = []
+      try {
+        const { body: body3 } = await HttpGet<string>(
+          'https://raw.githubusercontent.com/sjnhnp/gfc/main/plugins/custom.json',
+        )
+        customPlugins = JSON.parse(body3)
+      } catch (err) {
+        console.warn('Failed to load custom plugin repository:', err)
+      }
+      pluginHub.value = [...JSON.parse(body1), ...JSON.parse(body2), ...customPlugins]
       await WriteFile(PluginHubFilePath, JSON.stringify(pluginHub.value))
     } finally {
       pluginHubLoading.value = false
