@@ -38,9 +38,11 @@ description: 合并上游 GUI.for.Clash 项目的更新，同时保留所有自�
    - 文件: `frontend/public/plugins/crypto-js.js`
 
 5. **自定义插件仓库**
-   - 文件: `frontend/src/stores/plugins.ts` (添加第三方插件源加载 + 删除插件时调用 onUninstall)
+   - 文件: `frontend/src/stores/plugins.ts` (添加第三方插件源加载 + 删除插件时调用 onUninstall + 添加插件时调用 onInstall)
+   - 文件: `frontend/src/stores/kernelApi.ts` (应用重启时如果内核已运行也触发 onCoreStarted)
+   - 文件: `frontend/src/views/PluginsView/components/PluginConfigurator.vue` (修复 oldSettings 深拷贝问题)
    - 文件: `plugins/custom.json` (自定义插件列表)
-   - 文件: `plugins/plugin-clash-api-dashboard-fixed.js` (修复版面板插件)
+   - 文件: `plugins/plugin-clash-api-dashboard-fixed.js` (修复版面板插件: onInstall/onUninstall 支持)
 
 6. **GitHub Actions 自定义构建**
    - 文件: `.github/workflows/release.yml`
@@ -82,7 +84,15 @@ description: 合并上游 GUI.for.Clash 项目的更新，同时保留所有自�
     - 文件: `frontend/src/stores/subscribes.ts` (返回所有结果含失败信息)
     - 文件: `frontend/src/views/SubscribesView/index.vue` (显示失败的订阅错误)
 
-13. **其他自定义**
+13. **升级兼容性修复**
+    - 文件: `frontend/src/stores/subscribes.ts` (YAML 解析空值保护)
+    - 文件: `frontend/src/stores/profiles.ts` (YAML 解析空值保护)
+    - 文件: `frontend/src/stores/plugins.ts` (YAML 解析空值保护)
+    - 文件: `frontend/src/stores/rulesets.ts` (YAML 解析空值保护)
+    - 文件: `frontend/src/stores/scheduledtasks.ts` (YAML 解析空值保护)
+    - 说明: 确保老版本数据文件升级时不会因为空值导致页面空白
+
+14. **其他自定义**
     - 关于页面版本号修改: `frontend/src/views/AboutView.vue`
     - Go 后端修改: `bridge/bridge.go`, `bridge/io.go`
     - Windows 管理员权限: `build/windows/wails.exe.manifest`
