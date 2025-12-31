@@ -304,6 +304,14 @@ export const usePluginsStore = defineStore('plugins', () => {
   const deletePlugin = async (id: string) => {
     const idx = plugins.value.findIndex((v) => v.id === id)
     if (idx === -1) return
+
+    // Try to call onUninstall before deleting (to cleanup UI components like custom actions)
+    try {
+      await manualTrigger(id, PluginTriggerEvent.OnUninstall)
+    } catch {
+      // Ignore errors if onUninstall is not defined or fails
+    }
+
     const plugin = plugins.value.splice(idx, 1)[0]!
     try {
       await savePlugins()

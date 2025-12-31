@@ -38,7 +38,7 @@ description: 合并上游 GUI.for.Clash 项目的更新，同时保留所有自�
    - 文件: `frontend/public/plugins/crypto-js.js`
 
 5. **自定义插件仓库**
-   - 文件: `frontend/src/stores/plugins.ts` (添加第三方插件源加载)
+   - 文件: `frontend/src/stores/plugins.ts` (添加第三方插件源加载 + 删除插件时调用 onUninstall)
    - 文件: `plugins/custom.json` (自定义插件列表)
    - 文件: `plugins/plugin-clash-api-dashboard-fixed.js` (修复版面板插件)
 

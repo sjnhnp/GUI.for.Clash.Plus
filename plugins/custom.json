@@ -56,8 +56,8 @@
   {
     "id": "plugin-clash-api-dashboard-fixed",
     "name": "Clash API 仪表板 (修复版)",
-    "version": "v1.0.1",
-    "description": "方便的切换和访问 Clash 面板。修复版：添加 onConfigure 支持，配置更改后立即生效，无需重启内核。",
+    "version": "v1.0.2",
+    "description": "方便的切换和访问 Clash 面板。修复版：添加 onConfigure/onInstall/onUninstall 支持，配置更改后立即生效，卸载时清理组件。",
     "tags": [
       "实用工具",
       "功能扩展",

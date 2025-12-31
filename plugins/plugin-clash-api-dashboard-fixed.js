@@ -226,3 +226,21 @@ const onConfigure = (config, old) => {
         }
     }
 }
+
+/* 触发器 安装后 (修复版新增) */
+const onInstall = () => {
+    // 安装后，如果内核正在运行，立即加载组件
+    const kernelApiStore = Plugins.useKernelApiStore()
+    if (kernelApiStore.running) {
+        addToCoreStatePanel()
+    }
+}
+
+/* 触发器 卸载前 (修复版新增) */
+const onUninstall = () => {
+    // 卸载时清理所有组件
+    removeFromCoreStatePanel()
+    // 清理 window 上的引用
+    delete window[Plugin.id]
+}
+
