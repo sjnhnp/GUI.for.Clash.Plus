@@ -108,16 +108,17 @@ export interface PluginConfiguration {
   description: string
   key: string
   component:
-  | 'CheckBox'
-  | 'CodeViewer'
-  | 'Input'
-  | 'InputList'
-  | 'KeyValueEditor'
-  | 'Radio'
-  | 'Select'
-  | 'MultipleSelect'
-  | 'Switch'
-  | ''
+    | 'CheckBox'
+    | 'CodeViewer'
+    | 'Input'
+    | 'InputList'
+    | 'KeyValueEditor'
+    | 'Radio'
+    | 'Select'
+    | 'MultipleSelect'
+    | 'Switch'
+    | 'ColorPicker'
+    | ''
   value: any
   options: any[]
 }
