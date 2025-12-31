@@ -197,30 +197,38 @@ const onRun = () => {
     openWebUI(Plugin.DashboardName)
 }
 
-/* 触发器 核心启动后 */
-const onCoreStarted = () => {
-    addToCoreStatePanel()
-}
+/* 初始化状态监听器 */
+const initWatcher = () => {
+    // 总是重建 Watcher 以捕获最新的 Plugin 对象闭包(包含最新配置)
+    if (window[Plugin.id].unsub) {
+        window[Plugin.id].unsub()
+    }
 
-/* 触发器 核心停止后 */
-const onCoreStopped = () => {
-    removeFromCoreStatePanel()
+    const kernelApiStore = Plugins.useKernelApiStore()
+
+    // 监听 running 状态变化
+    window[Plugin.id].unsub = kernelApiStore.$subscribe((mutation, state) => {
+        if (state.running) {
+            addToCoreStatePanel()
+        } else {
+            removeFromCoreStatePanel()
+        }
+    })
+
+    return kernelApiStore
 }
 
 /* 触发器 Configure */
 const onConfigure = (config, old) => {
-    const kernelApiStore = Plugins.useKernelApiStore()
-    // 只要内核在运行，就更新 UI，移除 old 对比以确保一定更新
+    // 重建 watcher 以更新闭包上下文
+    const kernelApiStore = initWatcher()
+
+    // 强制刷新 UI (配置已变更，无论 running 状态是否变化都需要刷新)
     if (kernelApiStore.running) {
-        // 先移除旧的（如果存在）
         removeFromCoreStatePanel()
-
-        // 稍微延迟一下确保移除操作完成
+        // 延迟执行以确保 Vue 更新组件
         setTimeout(() => {
-            // 重新添加 WebUI 组件
             loadWebUIComponent(config.DashboardName)
-
-            // 重新添加或移除 Mode 组件
             if (config.ClashModeAction) {
                 loadClashModeComponent()
             }
@@ -228,9 +236,26 @@ const onConfigure = (config, old) => {
     }
 }
 
+/* 触发器 Startup */
+const onStartup = () => {
+    const kernelApiStore = initWatcher()
+    // 初始状态检查
+    if (kernelApiStore.running) {
+        addToCoreStatePanel()
+    }
+}
+
+/* 触发器 Ready */
+const onReady = () => {
+    const kernelApiStore = initWatcher()
+    if (kernelApiStore.running) {
+        addToCoreStatePanel()
+    }
+}
+
 /* 触发器 Install */
 const onInstall = () => {
-    const kernelApiStore = Plugins.useKernelApiStore()
+    const kernelApiStore = initWatcher()
     if (kernelApiStore.running) {
         addToCoreStatePanel()
     }
@@ -238,19 +263,21 @@ const onInstall = () => {
 
 /* 触发器 Uninstall */
 const onUninstall = () => {
+    if (window[Plugin.id].unsub) {
+        window[Plugin.id].unsub()
+        delete window[Plugin.id].unsub
+    }
     removeFromCoreStatePanel()
     delete window[Plugin.id]
 }
 
-/* 触发器 Ready (APP就绪) - 修复重启后不显示的问题 */
-const onReady = () => {
-    // APP 就绪时，检查内核是否已经在运行（如自动启动的情况）
-    // 延迟 1s 确保 Store 和 UI 状态已完全初始化
-    setTimeout(() => {
-        const kernelApiStore = Plugins.useKernelApiStore()
-        if (kernelApiStore.running) {
-            addToCoreStatePanel()
-        }
-    }, 1000)
+/* 兼容旧触发器 (主要逻辑已由 Watcher 接管) */
+const onCoreStarted = () => {
+    // 状态已由 Watcher 监听，此处无需操作，或作为备用
+    initWatcher()
+}
+
+const onCoreStopped = () => {
+    // 状态已由 Watcher 监听
 }
 
