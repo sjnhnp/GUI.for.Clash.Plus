@@ -216,21 +216,31 @@ const onCoreStopped = () => {
 }
 
 /* 触发器 配置更改后 (修复版新增) */
-const onConfigure = (config, old) => {
+const onConfigure = async (config, old) => {
     const kernelApiStore = Plugins.useKernelApiStore()
     if (!kernelApiStore.running) return
 
-    // DashboardName 改变时更新 WebUI 按钮
-    if (config.DashboardName !== old.DashboardName) {
-        loadWebUIComponent(config.DashboardName)
-    }
+    // 检查是否有配置变化
+    const dashboardChanged = config.DashboardName !== old.DashboardName
+    const clashModeChanged = config.ClashModeAction !== old.ClashModeAction
 
-    // ClashModeAction 改变时更新模式切换按钮
-    if (config.ClashModeAction !== old.ClashModeAction) {
-        if (config.ClashModeAction) {
-            loadClashModeComponent()
-        } else {
-            window[Plugin.id].removeClashMode?.()
+    if (dashboardChanged || clashModeChanged) {
+        // 重启内核以应用新的配置（这是最可靠的方式）
+        try {
+            await kernelApiStore.restartCore()
+        } catch (error) {
+            console.error('Failed to restart kernel:', error)
+            // 如果重启失败，尝试手动刷新组件
+            if (dashboardChanged) {
+                loadWebUIComponent(config.DashboardName)
+            }
+            if (clashModeChanged) {
+                if (config.ClashModeAction) {
+                    loadClashModeComponent()
+                } else {
+                    window[Plugin.id].removeClashMode?.()
+                }
+            }
         }
     }
 }
