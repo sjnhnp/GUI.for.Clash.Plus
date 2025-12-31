@@ -217,15 +217,14 @@ const onCoreStopped = () => {
 
 /* 触发器 配置更改后 (修复版新增) */
 const onConfigure = async (config, old) => {
-    console.log('[Dashboard Plugin] onConfigure called')
-    console.log('[Dashboard Plugin] config:', JSON.stringify(config))
-    console.log('[Dashboard Plugin] old:', JSON.stringify(old))
+    // 使用弹窗显示调试信息
+    const debugInfo = `onConfigure called\nconfig: ${JSON.stringify(config)}\nold: ${JSON.stringify(old)}`
+    Plugins.Notify('Dashboard Plugin Debug', debugInfo)
 
     const kernelApiStore = Plugins.useKernelApiStore()
-    console.log('[Dashboard Plugin] kernel running:', kernelApiStore.running)
 
     if (!kernelApiStore.running) {
-        console.log('[Dashboard Plugin] kernel not running, skip')
+        Plugins.Notify('Dashboard Plugin', 'Kernel not running, skip')
         return
     }
 
