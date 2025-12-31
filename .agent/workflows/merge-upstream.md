@@ -64,7 +64,10 @@ description: 合并上游 GUI.for.Clash 项目的更新，同时保留所有自�
    - 基于最近创建的 tag 递增: `.github/workflows/release.yml`
 
 10. **GFC Plus 品牌重命名**
-    - 应用标题: `frontend/.env` (VITE_APP_TITLE)
+    - 应用标题: `frontend/.env` (VITE_APP_TITLE, VITE_APP_NAME)
+    - 类型定义: `frontend/env.d.ts` (VITE_APP_NAME)
+    - 环境变量导出: `frontend/src/utils/env.ts` (APP_NAME)
+    - 更新检查文件名: `frontend/src/stores/app.ts` (使用 APP_NAME)
     - Wails 配置: `wails.json`
     - README: `README.md`
     - Gist 插件识别: `frontend/public/plugins/plugin-sync-configuration-gists-enhanced.js`

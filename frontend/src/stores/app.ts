@@ -15,6 +15,7 @@ import {
 import { RollingReleaseDirectory } from '@/constant/app'
 import {
   APP_TITLE,
+  APP_NAME,
   APP_VERSION,
   APP_VERSION_API,
   getGitHubApiAuthorization,
@@ -121,7 +122,7 @@ export const useAppStore = defineStore('app', () => {
         await MoveFile(appName, appName + '.bak')
         await UnzipZIPFile(downloadCacheFile, '.')
         const suffix = { windows: '.exe', linux: '' }[os]
-        await MoveFile(APP_TITLE + suffix, appName)
+        await MoveFile(APP_NAME + suffix, appName)
         message.success('about.updateSuccessfulRestart')
         restartable.value = true
       } else {
@@ -152,7 +153,7 @@ export const useAppStore = defineStore('app', () => {
       const { tag_name, assets } = body
 
       const { os, arch } = envStore.env
-      const assetName = `${APP_TITLE}-${os}-${arch}.zip`
+      const assetName = `${APP_NAME}-${os}-${arch}.zip`
 
       const asset = assets.find((v: any) => v.name === assetName)
       if (!asset) throw 'Asset Not Found:' + assetName
