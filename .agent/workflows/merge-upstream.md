@@ -104,16 +104,12 @@ description: 合并上游 GUI.for.Clash 项目的更新，同时保留所有自�
     - 文件: `.github/workflows/release.yml` (添加 Build-Linux job)
     - 输出格式: tar.gz (Linux amd64)
 
-16. **macOS 11 (Big Sur) 兼容性修复**
-    - 文件: `bridge/darwin_version.go` (macOS 版本检测)
-    - 文件: `main.go` (动态控制透明效果 + OnDomReady 强制重绘窗口)
-    - 文件: `frontend/src/assets/styles/variables.less` (不透明背景色)
-    - 文件: `frontend/src/assets/styles/custom.less` (禁用动画兼容模式)
+16. **macOS 12+ 最低版本要求**
+    - 文件: `build/darwin/Info.plist` (LSMinimumSystemVersion=12.0 + NSAppTransportSecurity)
+    - 文件: `.github/workflows/release.yml` (macos-latest + MACOSX_DEPLOYMENT_TARGET=12.0)
     - 文件: `frontend/vite.config.ts` (设置 build.target 为 Safari 14)
     - 文件: `frontend/src/App.vue` (替换 Array.at() 为兼容写法)
-    - 文件: `.github/workflows/release.yml` (使用 macos-14 + MACOSX_DEPLOYMENT_TARGET=10.13)
-    - 文件: `build/darwin/Info.plist` (添加 NSAppTransportSecurity)
-    - 说明: 解决 WebKit 在 macOS 11 (旧 Intel GPU) 上的渲染卡死问题
+    - 说明: 最低支持 macOS 12 (Monterey)，移除了 macOS 11 兼容性代码
 
 17. **其他自定义**
     - 关于页面版本号修改: `frontend/src/views/AboutView.vue`
