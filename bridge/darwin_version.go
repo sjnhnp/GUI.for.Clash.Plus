@@ -68,3 +68,18 @@ func SupportsMacOSTransparency() bool {
 	// macOS 12.0+ (Monterey and later) supports transparency well
 	return version.Major >= 12
 }
+
+// ShouldDisableMacOSGPU returns true if WebView GPU acceleration should be disabled.
+// On older macOS versions (11 and earlier) with older Intel GPUs (like MacBook 2015),
+// WebKit GPU rendering can cause blank screen issues.
+func ShouldDisableMacOSGPU() bool {
+	version := GetMacOSVersion()
+	if version == nil {
+		// Not on macOS
+		return false
+	}
+
+	// Disable GPU on macOS 11 and earlier
+	// These older versions may have WebKit rendering issues with certain Intel GPUs
+	return version.Major <= 11
+}
