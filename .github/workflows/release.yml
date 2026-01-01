@@ -149,7 +149,7 @@ jobs:
 
   Build-macOS:
     needs: Build-Frontend
-    runs-on: macos-13
+    runs-on: macos-14
     env:
       APP_NAME: GFC.Plus
       # Set deployment target to macOS 10.13 for backward compatibility with older macOS versions
