@@ -39,7 +39,7 @@ func main() {
 		Height:           bridge.Config.Height,
 		StartHidden:      bridge.Config.StartHidden,
 		WindowStartState: options.WindowStartState(bridge.Config.WindowStartState),
-		BackgroundColour: &options.RGBA{R: 255, G: 255, B: 255, A: 1},
+		BackgroundColour: &options.RGBA{R: 30, G: 30, B: 30, A: 255},
 		Windows: &windows.Options{
 			WebviewIsTransparent: true,
 			WindowIsTranslucent:  true,
@@ -49,8 +49,8 @@ func main() {
 		Mac: &mac.Options{
 			TitleBar:             mac.TitleBarHiddenInset(),
 			Appearance:           mac.DefaultAppearance,
-			WebviewIsTransparent: true,
-			WindowIsTranslucent:  true,
+			WebviewIsTransparent: bridge.SupportsMacOSTransparency(),
+			WindowIsTranslucent:  bridge.SupportsMacOSTransparency(),
 			About: &mac.AboutInfo{
 				Title:   bridge.Env.AppName,
 				Message: "© 2025 GUI.for.Cores",

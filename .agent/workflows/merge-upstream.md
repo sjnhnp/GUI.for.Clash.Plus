@@ -104,7 +104,13 @@ description: 合并上游 GUI.for.Clash 项目的更新，同时保留所有自�
     - 文件: `.github/workflows/release.yml` (添加 Build-Linux job)
     - 输出格式: tar.gz (Linux amd64)
 
-16. **其他自定义**
+16. **macOS 11 (Big Sur) 兼容性修复**
+    - 文件: `bridge/darwin_version.go` (macOS 版本检测)
+    - 文件: `main.go` (动态控制透明效果)
+    - 文件: `frontend/src/assets/styles/variables.less` (不透明背景色)
+    - 说明: macOS 11.x 禁用透明效果避免黑屏，macOS 12+ 保留透明效果
+
+17. **其他自定义**
     - 关于页面版本号修改: `frontend/src/views/AboutView.vue`
     - Go 后端修改: `bridge/bridge.go`, `bridge/io.go`
     - Windows 管理员权限: `build/windows/wails.exe.manifest`
