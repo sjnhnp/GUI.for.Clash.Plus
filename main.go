@@ -91,19 +91,27 @@ func main() {
 				// Inject a CSS class for frontend compatibility (disabling animations/blur)
 				runtime.WindowExecJS(ctx, `document.body.classList.add("platform-macos-old");`)
 
-					go func() {
-					// Wait a moment for the white/black screen to settle
-					time.Sleep(500 * time.Millisecond)
+				go func() {
+					// Wait longer for WebView to fully initialize
+					time.Sleep(1 * time.Second)
 
-					// Force show (in case StartHidden is true and it got stuck)
+					// Force show multiple times to fight against visibility state changes
 					runtime.WindowShow(ctx)
 
 					// The "Kick": Resize window slightly to force GPU context update
 					width, height := runtime.WindowGetSize(ctx)
 					runtime.WindowSetSize(ctx, width+1, height)
-					
-					time.Sleep(50 * time.Millisecond)
+
+					time.Sleep(100 * time.Millisecond)
 					runtime.WindowSetSize(ctx, width, height)
+
+					// Show again after resize
+					time.Sleep(100 * time.Millisecond)
+					runtime.WindowShow(ctx)
+
+					// Another kick after a longer delay
+					time.Sleep(500 * time.Millisecond)
+					runtime.WindowShow(ctx)
 				}()
 			}
 		},

@@ -1,13 +1,14 @@
-/* macOS 11 Compatibility Fix */
+/* macOS 11 Compatibility Fix - Disable heavy GPU effects */
+.platform-macos-old,
 .platform-macos-old * {
   animation: none !important;
+  animation-delay: 0s !important;
+  animation-duration: 0s !important;
   transition: none !important;
+  transition-delay: 0s !important;
+  transition-duration: 0s !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  background-color: var(--bg-color) !important;
-  /* Fallback for blurred backgrounds */
-  transform: translateZ(0);
-  /* Force GPU layer for everything might help compositing */
 }
 
 body[feature-outline='true'] {
