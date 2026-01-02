@@ -380,6 +380,11 @@ export const generateConfig = async (originalProfile: ProfileType) => {
     hosts: {},
   }
 
+  // Add sniffer config if present and enabled
+  if (profile.snifferConfig) {
+    config.sniffer = profile.snifferConfig
+  }
+
   // Force cleanup for MMDB mode to prevent kernel from looking for GeoIP.dat
   if (!config['geodata-mode']) {
     // When using MMDB mode, we should not provide a DAT download URL to avoid confusion

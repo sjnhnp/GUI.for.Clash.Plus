@@ -143,6 +143,25 @@ export type ProfileType = {
     code: string
   }
   subRulesConfig: Record<string, string[]>
+  // Sniffer configuration for protocol detection
+  // Not exposed in GUI but preserved from subscription imports
+  snifferConfig?: {
+    enable?: boolean
+    'force-dns-mapping'?: boolean
+    'parse-pure-ip'?: boolean
+    'override-destination'?: boolean
+    sniff?: Record<string, {
+      ports?: (number | string)[]
+      'override-destination'?: boolean
+    }>
+    'force-domain'?: string[]
+    'skip-domain'?: string[]
+    'skip-src-address'?: string[]
+    'skip-dst-address'?: string[]
+    // Deprecated fields, but still supported for compatibility
+    sniffing?: string[]
+    'port-whitelist'?: (number | string)[]
+  }
   // Rule providers used only by DNS features (fake-ip-filter, nameserver-policy)
   // These are not shown in the rules GUI but are needed for rule-provider generation
   dnsRuleProviders?: Record<string, {

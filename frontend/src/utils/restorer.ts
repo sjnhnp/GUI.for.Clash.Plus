@@ -228,6 +228,9 @@ export const restoreProfile = (
       })
     } else if (field === 'sub-rules') {
       profile.subRulesConfig = value
+    } else if (field === 'sniffer') {
+      // Preserve sniffer configuration from subscription
+      profile.snifferConfig = value
     }
   })
 
