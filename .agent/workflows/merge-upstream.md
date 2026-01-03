@@ -122,6 +122,16 @@ description: 合并上游 GUI.for.Clash 项目的更新，同时保留所有自�
     - Go 后端修改: `bridge/bridge.go`, `bridge/io.go`
     - Windows 管理员权限: `build/windows/wails.exe.manifest`
 
+## 需要完全保留本项目版本的文件（拒绝上游更改）
+
+以下文件在合并时**必须使用本项目的版本**，拒绝上游的任何更改：
+
+| 文件 | 原因 |
+|------|------|
+| `frontend/src/views/AboutView.vue` | 我们移除了 Telegram 链接，保留简洁的关于页面 |
+
+**处理方法**：当这些文件有冲突时，直接使用 `git checkout --ours <file>` 保留我们的版本。
+
 ## 合并步骤
 
 // turbo
@@ -154,7 +164,12 @@ git merge upstream/main --no-commit --no-ff
 
 5. 如果有冲突，需要手动解决：
    - 查看冲突文件: `git diff --name-only --diff-filter=U`
-   - 对于每个冲突文件，需要保留本项目的自定义修改，同时接受上游的改进
+   - **首先处理需要完全保留我们版本的文件**（见上方"需要完全保留本项目版本的文件"列表）：
+     ```bash
+     git checkout --ours frontend/src/views/AboutView.vue
+     git add frontend/src/views/AboutView.vue
+     ```
+   - 对于其他冲突文件，需要保留本项目的自定义修改，同时接受上游的改进
    - 特别注意上面"自定义修改清单"中的文件
 
 6. 解决冲突后，标记为已解决并提交
