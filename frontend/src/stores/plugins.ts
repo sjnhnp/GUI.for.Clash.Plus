@@ -10,7 +10,7 @@ import {
   omitArray,
   ignoredError,
   isNumber,
-  updateTrayMenus,
+  updateTrayAndMenus,
   stringifyNoFolding,
   deepClone,
   confirm,
@@ -681,7 +681,7 @@ export const usePluginsStore = defineStore('plugins', () => {
 
   watch([_watchMenus, _watchDisabled], () => {
     if (appSettingsStore.app.addPluginToMenu) {
-      updateTrayMenus()
+      updateTrayAndMenus()
     }
   })
 
