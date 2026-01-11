@@ -40,8 +40,14 @@ type ExecOptions struct {
 	Env               map[string]string
 }
 
+type Range struct {
+	Start *int64
+	End   *int64
+}
+
 type IOOptions struct {
-	Mode string // Binary / Text
+	Mode  string // Binary / Text
+	Range string // "start-end" / "start-" / "-end"
 }
 
 type FlagResult struct {
@@ -54,8 +60,10 @@ type ServerOptions struct {
 	Key           string
 	StaticPath    string
 	StaticRoute   string
+	StaticHeaders map[string]string
 	UploadPath    string
 	UploadRoute   string
+	UploadHeaders map[string]string
 	MaxUploadSize int64
 }
 
