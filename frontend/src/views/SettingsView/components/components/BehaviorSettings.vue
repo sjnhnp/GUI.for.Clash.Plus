@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 
-import { WriteFile, RemoveFile, AbsolutePath } from '@/bridge'
+import { WriteFile, RemoveFile, AbsolutePath, ExitApp } from '@/bridge'
 import { WebviewGpuPolicyOptions, WindowStateOptions } from '@/constant/app'
 import { useAppSettingsStore, useEnvStore } from '@/stores'
 import {
@@ -9,6 +9,7 @@ import {
   getTaskSchXmlString,
   getLaunchAgentPlistString,
   getDesktopAutostartString,
+  confirm,
   message,
   QuerySchTask,
   CreateSchTask,
@@ -21,6 +22,7 @@ import {
   DeleteDesktopAutostart,
   CheckPermissions,
   SwitchPermissions,
+  RunWithPowerShell,
 } from '@/utils'
 
 const appSettings = useAppSettingsStore()
@@ -29,10 +31,22 @@ const envStore = useEnvStore()
 const isAdmin = ref(false)
 const isAutoStartEnabled = ref(false)
 
+const restartApp = async (admin = false) => {
+  if (admin) {
+    await RunWithPowerShell(envStore.env.appPath, [], { admin, wait: false })
+  } else {
+    await RunWithPowerShell('explorer', [envStore.env.appPath], { wait: false })
+  }
+  await ExitApp()
+}
+
 const onPermChange = async (v: boolean) => {
   try {
     await SwitchPermissions(v)
-    message.success('common.success')
+    if (v !== envStore.env.isPrivileged) {
+      const ok = await confirm('Notice', 'Restart the application now?').catch(() => 0)
+      ok && (await restartApp(v))
+    }
   } catch (error: any) {
     message.error(error)
     console.log(error)
@@ -175,7 +189,17 @@ if (envStore.env.os === 'windows') {
         {{ $t('settings.admin') }}
         <span class="font-normal text-12">({{ $t('settings.needRestart') }})</span>
       </div>
-      <Switch v-model="isAdmin" @change="onPermChange" />
+      <div class="flex items-center gap-4">
+        <Button
+          v-if="envStore.env.isPrivileged !== isAdmin"
+          v-tips="'titlebar.restart'"
+          type="primary"
+          icon="refresh"
+          size="small"
+          @click="() => restartApp(isAdmin)"
+        />
+        <Switch v-model="isAdmin" @change="onPermChange" />
+      </div>
     </div>
     <div v-platform="['windows']" class="px-8 py-12 flex items-center justify-between">
       <div class="text-16 font-bold">
