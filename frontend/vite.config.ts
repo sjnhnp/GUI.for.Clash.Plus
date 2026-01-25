@@ -8,6 +8,7 @@ export default defineConfig({
   base: './',
   plugins: [vue()],
   resolve: {
+    extensions: ['.ts', '.js'],
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
       '@wails': fileURLToPath(new URL('./src/bridge/wailsjs', import.meta.url)),
@@ -20,6 +21,7 @@ export default defineConfig({
     target: ['es2020', 'safari14', 'chrome87', 'firefox78'],
     assetsInlineLimit: 100 * 1024, // 100KB
     chunkSizeWarningLimit: 4096, // 4MB
+    cssCodeSplit: false,
   },
   esbuild: {
     // Production optimizations: remove console.log and debugger in production
