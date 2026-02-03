@@ -90,7 +90,7 @@ export const generateProxies = async (groups: ProfileType['proxyGroupsConfig']) 
 
   const proxyMap: Record<string, ProxiesType[]> = {}
 
-  for (const subID of subIDsMap) {
+  for (const subID of Array.from(subIDsMap)) {
     const sub = subscribesStore.getSubscribeById(subID)
     if (sub) {
       try {
@@ -319,7 +319,7 @@ const generateRuleProviders = async (
     }
     // New rule mode format: RULE-SET,name,fake-ip or RULE-SET,name,real-ip
     const ruleSetMatch = v.match(/^RULE-SET,([^,]+),(?:fake-ip|real-ip)$/i)
-    if (ruleSetMatch) {
+    if (ruleSetMatch && ruleSetMatch[1]) {
       return [ruleSetMatch[1].trim()]
     }
     return []
@@ -342,7 +342,7 @@ const generateRuleProviders = async (
     }
     // New rule mode format: RULE-SET,name,fake-ip or RULE-SET,name,real-ip
     const ruleSetMatch = v.match(/^RULE-SET,([^,]+),(?:fake-ip|real-ip)$/i)
-    if (ruleSetMatch) {
+    if (ruleSetMatch && ruleSetMatch[1]) {
       return [ruleSetMatch[1].trim()]
     }
     return []

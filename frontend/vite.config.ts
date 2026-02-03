@@ -26,6 +26,6 @@ export default defineConfig({
   esbuild: {
     // Production optimizations: remove console.log and debugger in production
     drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
-  },
+  } as any,
 })
 

@@ -166,7 +166,7 @@ watch(() => props.dataSource.length, updateContainerHeight)
                 <tbody>
                   <tr
                     v-for="record in visibleData"
-                    :key="record.id"
+                    :key="(record as any).id"
                     v-menu="menu.map((v) => ({ ...v, handler: () => v.handler?.(record) }))"
                     :style="{ height: `${rowHeight}px` }"
                     :class="record.__virtualIndex % 2 === 0 ? 'virtual-row-even' : 'virtual-row-odd'"

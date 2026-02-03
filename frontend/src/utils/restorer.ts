@@ -156,7 +156,7 @@ export const restoreProfile = (
         let payload = parts.slice(1).join(',')
 
         // Handle logical/complex rules (AND, OR, NOT, etc)
-        const upperType = type.toUpperCase()
+        const upperType = type?.toUpperCase() || ''
         if (
           ['AND', 'OR', 'NOT', 'SUB-RULE'].includes(upperType) ||
           payloadAndType.includes('((')
@@ -195,7 +195,7 @@ export const restoreProfile = (
             type: type,
             enable: true,
             payload: provider.type == 'inline' ? stringify(provider.payload) : provider.url,
-            proxy: _proxy,
+            proxy: _proxy || '',
             'no-resolve': !!noResolve,
             'ruleset-behavior': provider.behavior,
             'ruleset-format': provider.format || RulesetFormat.Yaml,
@@ -216,7 +216,7 @@ export const restoreProfile = (
           type: type as RuleType,
           enable: true,
           payload: type === 'MATCH' ? '' : payload,
-          proxy: _proxy,
+          proxy: _proxy || '',
           'no-resolve': !!noResolve,
           'ruleset-behavior': RulesetBehavior.Domain,
           'ruleset-format': RulesetFormat.Mrs,
@@ -256,7 +256,7 @@ export const restoreProfile = (
     }
     // New rule mode format: RULE-SET,name,fake-ip or RULE-SET,name,real-ip
     const ruleSetMatch = v.match(/^RULE-SET,([^,]+),(?:fake-ip|real-ip)$/i)
-    if (ruleSetMatch) {
+    if (ruleSetMatch && ruleSetMatch[1]) {
       return [ruleSetMatch[1].trim()]
     }
     return []
