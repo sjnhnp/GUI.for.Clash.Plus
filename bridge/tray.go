@@ -22,6 +22,11 @@ func CreateTray(a *App, icon []byte) (trayStart, trayEnd func()) {
 			}
 		})
 
+		addClickMenuItem := func(title, tooltip string, action func()) {
+			m := systray.AddMenuItem(title, tooltip)
+			m.Click(action)
+		}
+
 		// Ensure the tray is still available if rolling-release fails
 		addClickMenuItem("Show", "Show", func() { a.ShowMainWindow() })
 		addClickMenuItem("Restart", "Restart", func() { a.RestartApp() })
@@ -43,18 +48,6 @@ func (a *App) UpdateTrayAndMenus(tray TrayContent, menus []MenuItem) {
 	log.Printf("UpdateTrayAndMenus")
 	updateTray(a, tray)
 	updateTrayMenus(a, menus)
-}
-
-func (a *App) ExitApp() {
-	systray.Quit()
-	runtime.Quit(a.Ctx)
-	os.Exit(0)
-}
-
-func addClickMenuItem(title, tooltip string, action func()) *systray.MenuItem {
-	m := systray.AddMenuItem(title, tooltip)
-	m.Click(action)
-	return m
 }
 
 func createMenuItem(menu MenuItem, a *App, parent *systray.MenuItem) {

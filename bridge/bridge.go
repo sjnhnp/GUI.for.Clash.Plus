@@ -27,6 +27,7 @@ var Config = &AppConfig{}
 
 var Env = &EnvResult{
 	IsStartup:    true,
+	PreventExit:  true,
 	FromTaskSch:  false,
 	WebviewPath:  "",
 	AppName:      "",
@@ -87,7 +88,14 @@ func (a *App) IsStartup() bool {
 	return false
 }
 
+func (a *App) ExitApp() {
+	log.Printf("ExitApp")
+	Env.PreventExit = false
+	runtime.Quit(a.Ctx)
+}
+
 func (a *App) RestartApp() FlagResult {
+	log.Printf("RestartApp")
 	exePath := Env.BasePath + "/" + Env.AppName
 
 	cmd := exec.Command(exePath)
@@ -103,6 +111,7 @@ func (a *App) RestartApp() FlagResult {
 }
 
 func (a *App) GetEnv() EnvResult {
+	log.Printf("GetEnv")
 	return EnvResult{
 		AppName:      Env.AppName,
 		AppVersion:   Env.AppVersion,
@@ -131,6 +140,7 @@ func (a *App) GetInterfaces() FlagResult {
 }
 
 func (a *App) ShowMainWindow() {
+	log.Printf("ShowMainWindow")
 	runtime.WindowShow(a.Ctx)
 }
 

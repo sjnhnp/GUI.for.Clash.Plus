@@ -371,7 +371,7 @@ jobs:
             release-assets/**/*.zip
             release-assets/**/*.tar.gz
           draft: false
-          prerelease: false
+          prerelease: ${{ contains(github.ref_name, 'dev') }}
           body: |
             Release ${{ env.TAG_NAME }}
             Auto-generated release from GitHub Actions.
