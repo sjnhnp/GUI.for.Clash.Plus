@@ -34,6 +34,7 @@ import type { CustomAction, CustomActionFn, Menu } from '@/types/app'
 
 export const useAppStore = defineStore('app', () => {
   const isAppExiting = ref(false)
+  const isAppReloading = ref(false)
 
   /* Global Menu */
   const menuShow = ref(false)
@@ -193,6 +194,7 @@ export const useAppStore = defineStore('app', () => {
 
   return {
     isAppExiting,
+    isAppReloading,
     menuShow,
     menuPosition,
     menuList,

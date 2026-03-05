@@ -76,6 +76,7 @@ type AppSettings = {
     cardColumns: number
     sortByDelay: boolean
     testUrl: string
+    testTimeout: number
     concurrencyLimit: number
     controllerCloseMode: ControllerCloseMode
     controllerSensitivity: number

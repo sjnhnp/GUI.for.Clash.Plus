@@ -248,10 +248,10 @@ func extractEmbeddedFiles(fs embed.FS) {
 
 	extractFiles(fs, iconSrc, iconDst)
 	extractFiles(fs, imgSrc, imgDst)
-	
+
 	// Extract pre-installed plugin
 	extractSpecificFile(fs, pluginSrc, "plugin-sync-configuration-gists-enhanced.js", pluginDst, "plugin-sync-gists-enhanced.js")
-	
+
 	// Extract crypto-js.js for the plugin
 	extractSpecificFile(fs, thirdPartySrc, "crypto-js.js", thirdPartyDst, "crypto-js.js")
 }

@@ -130,6 +130,7 @@ export const DraggableOptions = {
 export const PluginsTriggerOptions = [
   { label: 'plugin.on::startup', value: PluginTrigger.OnStartup },
   { label: 'plugin.on::ready', value: PluginTrigger.OnReady },
+  { label: 'plugin.on::reload', value: PluginTrigger.OnReload },
   { label: 'plugin.on::shutdown', value: PluginTrigger.OnShutdown },
   { label: 'plugin.on::manual', value: PluginTrigger.OnManual },
   { label: 'plugin.on::generate', value: PluginTrigger.OnGenerate },
@@ -158,6 +159,8 @@ export const ScheduledTaskOptions = [
 export const DefaultSubscribeScript = `const onSubscribe = async (proxies, subscription) => {\n  return { proxies, subscription }\n}`
 
 export const DefaultTestURL = 'https://www.gstatic.com/generate_204'
+
+export const DefaultTestTimeout = 5000
 
 export const DefaultConcurrencyLimit = 20
 

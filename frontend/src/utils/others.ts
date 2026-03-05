@@ -355,21 +355,66 @@ export const deepAssign = (...args: any[]) => {
   return target
 }
 
-export const base64Encode = (str: string) => {
-  return btoa(
-    encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) =>
-      String.fromCharCode(('0x' + p1) as any),
-    ),
-  )
+export const readonly = <T>(obj: T): T => {
+  if (typeof obj !== 'object' || obj === null) return obj
+  return new Proxy(obj, {
+    get(target, key) {
+      const result = Reflect.get(target, key)
+      if (typeof result === 'object' && result !== null) {
+        return readonly(result)
+      }
+      return result
+    },
+    set(target, key) {
+      console.warn(`Set operation on key "${String(key)}" failed: target is readonly.`, target)
+      return true
+    },
+    deleteProperty(target, key) {
+      console.warn(`Delete operation on key "${String(key)}" failed: target is readonly.`, target)
+      return true
+    },
+    defineProperty(target, key) {
+      console.warn(
+        `DefineProperty operation on key "${String(key)}" failed: target is readonly.`,
+        target,
+      )
+      return false
+    },
+    setPrototypeOf(target) {
+      console.warn(`SetPrototypeOf operation failed: target is readonly.`, target)
+      return false
+    },
+  })
 }
 
-export const base64Decode = (str: string) => {
-  return decodeURIComponent(
-    atob(str)
-      .split('')
-      .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-      .join(''),
-  )
+export const normalizeBase64 = (str: string): string => {
+  const normalized = str.trim().replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/')
+
+  const padding = (4 - (normalized.length % 4)) % 4
+  return normalized + '='.repeat(padding)
+}
+
+export const base64UrlEncode = (str: string): string => {
+  return base64Encode(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+export const base64Encode = (str: string): string => {
+  const bytes = new TextEncoder().encode(str)
+  const len = bytes.length
+  const chars = Array(len)
+
+  for (let i = 0; i < len; i++) {
+    chars[i] = String.fromCharCode(bytes[i]!)
+  }
+
+  return btoa(chars.join(''))
+}
+
+export const base64Decode = (input: string): string => {
+  const base64 = normalizeBase64(input)
+  const binary = atob(base64)
+  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0))
+  return new TextDecoder().decode(bytes)
 }
 
 export const stringifyNoFolding = (content: any) => {

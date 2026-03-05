@@ -15,6 +15,7 @@ import {
   DefaultConcurrencyLimit,
   DefaultControllerSensitivity,
   DefaultFontFamily,
+  DefaultTestTimeout,
   DefaultTestURL,
   UserFilePath,
 } from '@/constant/app'
@@ -83,6 +84,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       cardColumns: DefaultCardColumns,
       sortByDelay: false,
       testUrl: DefaultTestURL,
+      testTimeout: DefaultTestTimeout,
       concurrencyLimit: DefaultConcurrencyLimit,
       controllerCloseMode: ControllerCloseMode.All,
       controllerSensitivity: DefaultControllerSensitivity,
