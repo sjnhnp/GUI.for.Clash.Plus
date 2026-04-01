@@ -133,6 +133,30 @@ export type ProfileType = {
     'ruleset-proxy': string
     'ruleset-interval': number
   }[]
+  sniffer: {
+    enable: boolean
+    'force-dns-mapping': boolean
+    'parse-pure-ip': boolean
+    'override-destination': boolean
+    'force-domain': string[]
+    'skip-domain': string[]
+    'skip-src-address': string[]
+    'skip-dst-address': string[]
+    sniff: {
+      HTTP: {
+        enable: boolean
+        ports: string[]
+      }
+      TLS: {
+        enable: boolean
+        ports: string[]
+      }
+      QUIC: {
+        enable: boolean
+        ports: string[]
+      }
+    }
+  }
   mixinConfig: {
     priority: 'mixin' | 'gui'
     format: 'json' | 'yaml'
@@ -236,7 +260,6 @@ export const useProfilesStore = defineStore('profiles', () => {
   }
 
   const getProfileTemplate = (name = ''): ProfileType => {
-    const ids = [sampleID(), sampleID(), sampleID(), sampleID(), sampleID()] as const
     return {
       id: sampleID(),
       name: name,
@@ -244,8 +267,9 @@ export const useProfilesStore = defineStore('profiles', () => {
       advancedConfig: Defaults.AdvancedConfigDefaults(),
       tunConfig: Defaults.TunConfigDefaults(),
       dnsConfig: Defaults.DnsConfigDefaults(),
-      proxyGroupsConfig: Defaults.ProxyGroupsConfigDefaults(ids),
-      rulesConfig: Defaults.RulesConfigDefaults(ids),
+      proxyGroupsConfig: Defaults.ProxyGroupsConfigDefaults(),
+      rulesConfig: Defaults.RulesConfigDefaults(),
+      sniffer: Defaults.SnifferDefaults(),
       mixinConfig: Defaults.MixinConfigDefaults(),
       scriptConfig: Defaults.ScriptConfigDefaults(),
       subRulesConfig: Defaults.SubRulesConfigDefaults(),

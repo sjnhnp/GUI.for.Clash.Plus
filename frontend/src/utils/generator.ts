@@ -377,6 +377,7 @@ export const generateConfig = async (originalProfile: ProfileType) => {
         : undefined,
     },
     dns: profile.dnsConfig,
+    sniffer: profile.sniffer,
     hosts: {},
   }
 
@@ -463,11 +464,33 @@ export const generateConfig = async (originalProfile: ProfileType) => {
     profile.dnsRuleProviders,
   )
 
+  if (config.sniffer.sniff.HTTP.enable) {
+    delete config.sniffer.sniff.HTTP.enable
+  } else {
+    delete config.sniffer.sniff.HTTP
+  }
+  if (config.sniffer.sniff.TLS.enable) {
+    delete config.sniffer.sniff.TLS.enable
+  } else {
+    delete config.sniffer.sniff.TLS
+  }
+  if (config.sniffer.sniff.QUIC.enable) {
+    delete config.sniffer.sniff.QUIC.enable
+  } else {
+    delete config.sniffer.sniff.QUIC
+  }
+
   config['proxies'] = await generateProxies(profile.proxyGroupsConfig)
 
   config['proxy-groups'] = profile.proxyGroupsConfig.map((proxyGruoup) =>
     generateProxyGroup(proxyGruoup, profile.proxyGroupsConfig),
   )
+
+  const global = config['proxy-groups'].find((v: Recordable) => v.name === 'GLOBAL')
+  if (global) {
+    const groups = config['proxy-groups'].map((v: Recordable) => v.name)
+    global.proxies.sort((a: string, b: string) => groups.indexOf(a) - groups.indexOf(b))
+  }
 
   const subscribesStore = useSubscribesStore()
   // Only inject rules from subscriptions NOT using internal restore logic
@@ -483,7 +506,9 @@ export const generateConfig = async (originalProfile: ProfileType) => {
         if (type === RuleType.InsertionPoint || !enable) {
           return false
         }
-        return true
+        return (
+          profile.advancedConfig['geodata-mode'] || ![RuleType.Geosite, RuleType.Geoip].includes(type)
+        )
       })
       .map((rule) => generateRule(rule, profile.proxyGroupsConfig)),
   ]

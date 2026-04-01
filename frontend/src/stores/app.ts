@@ -7,11 +7,10 @@ import {
   HttpGet,
   MoveFile,
   UnzipZIPFile,
-  MakeDir,
   RemoveFile,
   HttpCancel,
-  OpenDir,
   ReadDir,
+  Exec,
 } from '@/bridge'
 import { LanguageOptions, LocalesFilePath, RollingReleaseDirectory } from '@/constant/app'
 import { loadLocale } from '@/lang'
@@ -23,7 +22,6 @@ import {
   getGitHubApiAuthorization,
   ignoredError,
   message,
-  alert,
   sampleID,
   sleep,
 } from '@/utils'
@@ -31,6 +29,7 @@ import {
 import { useEnvStore } from './env'
 
 import type { CustomAction, CustomActionFn, Menu } from '@/types/app'
+import { OS } from '@/enums/app'
 
 export const useAppStore = defineStore('app', () => {
   const isAppExiting = ref(false)
@@ -87,7 +86,7 @@ export const useAppStore = defineStore('app', () => {
   ) => {
     if (!customActions.value[target]) throw new Error('Target does not exist: ' + target)
     const _actions = Array.isArray(actions) ? actions : [actions]
-    _actions.forEach((action) => (action.id = sampleID()))
+    _actions.forEach((action) => !action.id && (action.id = sampleID()))
     customActions.value[target].push(..._actions)
     const remove = () => {
       customActions.value[target] = customActions.value[target].filter(
@@ -118,14 +117,12 @@ export const useAppStore = defineStore('app', () => {
     downloading.value = true
     try {
       const downloadCacheFile = 'data/.cache/gui.zip'
-      const downloadCancelId = downloadCacheFile
 
       const { update, destroy } = message.info('common.downloading', 10 * 60 * 1_000, () => {
-        HttpCancel(downloadCancelId)
+        HttpCancel(downloadCacheFile)
         setTimeout(() => RemoveFile(downloadCacheFile), 1000)
       })
 
-      await MakeDir('data/.cache')
       await Download(
         downloadUrl.value,
         downloadCacheFile,
@@ -134,23 +131,32 @@ export const useAppStore = defineStore('app', () => {
           update(t('common.downloading') + ((progress / total) * 100).toFixed(2) + '%')
         },
         {
-          CancelId: downloadCancelId,
+          CancelId: downloadCacheFile,
         },
       ).finally(destroy)
 
-      const { appName, os } = envStore.env
-      if (os !== 'darwin') {
+      const { appName, os, basePath } = envStore.env
+      const suffix = { [OS.Windows]: '.exe', [OS.Linux]: '' }[os]
+
+      if (os === OS.Darwin) {
+        const cur_pkg = basePath.replace('/Contents/MacOS', '')
+        const tmp_dir = cur_pkg + '_tmp'
+        const cur_pkg_bak = cur_pkg + '.bak'
+        await UnzipZIPFile(downloadCacheFile, tmp_dir)
+        await Exec('xattr', ['-rd', 'com.apple.quarantine', tmp_dir])
+        await MoveFile(cur_pkg, cur_pkg_bak)
+        await MoveFile(`${tmp_dir}/${APP_TITLE}.app`, cur_pkg)
+        await RemoveFile(tmp_dir)
+        await RemoveFile(cur_pkg_bak)
+      } else {
         await MoveFile(appName, appName + '.bak')
         await UnzipZIPFile(downloadCacheFile, '.')
-        const suffix = { windows: '.exe', linux: '' }[os]
         await MoveFile(APP_NAME + suffix, appName)
         message.success('about.updateSuccessfulRestart')
         restartable.value = true
-      } else {
-        await UnzipZIPFile(downloadCacheFile, 'data')
-        alert('common.success', 'about.updateSuccessfulReplace')
-        await OpenDir('data')
       }
+      message.success('about.updateSuccessfulRestart')
+      restartable.value = true
 
       await RemoveFile(downloadCacheFile)
       await ignoredError(RemoveFile, RollingReleaseDirectory)

@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 
-import { WriteFile, RemoveFile, AbsolutePath, ExitApp } from '@/bridge'
+import { ExitApp, WriteFile, RemoveFile, AbsolutePath } from '@/bridge'
 import { WebviewGpuPolicyOptions, WindowStateOptions } from '@/constant/app'
 import { useAppSettingsStore, useEnvStore } from '@/stores'
 import {
@@ -23,7 +23,11 @@ import {
   CheckPermissions,
   SwitchPermissions,
   RunWithPowerShell,
+  IsAutoStartEnabled,
+  EnableAutoStart,
+  DisableAutoStart,
 } from '@/utils'
+import { OS } from '@/enums/app'
 
 const appSettings = useAppSettingsStore()
 const envStore = useEnvStore()
@@ -53,7 +57,6 @@ const onPermChange = async (v: boolean) => {
   }
 }
 
-// Windows: Task Scheduler
 const onTaskSchChange = async (v: boolean) => {
   isAutoStartEnabled.value = !v
   try {
@@ -104,11 +107,11 @@ const onDesktopAutostartChange = async (v: boolean) => {
 const onStartupDelayChange = async (delay: number) => {
   if (appSettings.app.startupDelay !== delay) {
     try {
-      if (envStore.env.os === 'windows') {
+      if (envStore.env.os === OS.Windows) {
         await createSchTask(delay)
-      } else if (envStore.env.os === 'darwin') {
+      } else if (envStore.env.os === OS.Darwin) {
         await createLaunchAgent(delay)
-      } else if (envStore.env.os === 'linux') {
+      } else if (envStore.env.os === OS.Linux) {
         await createDesktopAutostart(delay)
       }
       appSettings.app.startupDelay = delay
@@ -168,14 +171,14 @@ const createDesktopAutostart = async (delay = 30) => {
 }
 
 // Initialize based on OS
-if (envStore.env.os === 'windows') {
+if (envStore.env.os === OS.Windows) {
   checkSchtask()
   CheckPermissions().then((admin) => {
     isAdmin.value = admin
   })
-} else if (envStore.env.os === 'darwin') {
+} else if (envStore.env.os === OS.Darwin) {
   checkLaunchAgent()
-} else if (envStore.env.os === 'linux') {
+} else if (envStore.env.os === OS.Linux) {
   checkDesktopAutostart()
 }
 </script>
@@ -184,7 +187,7 @@ if (envStore.env.os === 'windows') {
   <div class="px-8 py-12 text-18 font-bold">{{ $t('settings.behavior') }}</div>
 
   <Card>
-    <div v-platform="['windows']" class="px-8 py-12 flex items-center justify-between">
+    <div v-platform="[OS.Windows]" class="px-8 py-12 flex items-center justify-between">
       <div class="text-16 font-bold">
         {{ $t('settings.admin') }}
         <span class="font-normal text-12">({{ $t('settings.needRestart') }})</span>
@@ -201,10 +204,12 @@ if (envStore.env.os === 'windows') {
         <Switch v-model="isAdmin" @change="onPermChange" />
       </div>
     </div>
-    <div v-platform="['windows']" class="px-8 py-12 flex items-center justify-between">
+    <div v-platform="[OS.Windows, OS.Darwin]" class="px-8 py-12 flex items-center justify-between">
       <div class="text-16 font-bold">
         {{ $t('settings.startup.name') }}
-        <span class="font-normal text-12">({{ $t('settings.needAdmin') }})</span>
+        <span v-platform="[OS.Windows]" class="font-normal text-12">
+          ({{ $t('settings.needAdmin') }})
+        </span>
       </div>
       <div class="flex items-center">
         <Radio
@@ -218,7 +223,7 @@ if (envStore.env.os === 'windows') {
     </div>
     <div
       v-if="isAutoStartEnabled"
-      v-platform="['windows']"
+      v-platform="[OS.Windows]"
       class="px-8 py-12 flex items-center justify-between"
     >
       <div class="text-16 font-bold">
@@ -322,14 +327,14 @@ if (envStore.env.os === 'windows') {
       <div class="text-16 font-bold">{{ $t('settings.closeKernelOnExit') }}</div>
       <Switch v-model="appSettings.app.closeKernelOnExit" />
     </div>
-    <div v-platform="['windows']" class="px-8 py-12 flex items-center justify-between">
+    <div v-platform="[OS.Windows]" class="px-8 py-12 flex items-center justify-between">
       <div class="text-16 font-bold">
         {{ $t('settings.restartKernelAfterResume.name') }}
         <span class="font-normal text-12">({{ $t('settings.restartKernelAfterResume.tips') }})</span>
       </div>
       <Switch v-model="appSettings.app.restartKernelAfterResume" />
     </div>
-    <div v-platform="['linux']" class="px-8 py-12 flex items-center justify-between">
+    <div v-platform="[OS.Linux]" class="px-8 py-12 flex items-center justify-between">
       <div class="text-16 font-bold">
         {{ $t('settings.webviewGpuPolicy.name') }}
         <span class="font-normal text-12">({{ $t('settings.needRestart') }})</span>

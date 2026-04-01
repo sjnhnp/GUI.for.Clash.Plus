@@ -81,6 +81,7 @@ func main() {
 		},
 		OnStartup: func(ctx context.Context) {
 			app.Ctx = ctx
+			runtime.InitializeNotifications(ctx)
 			trayStart()
 			app.StartPowerMonitor() // Start monitoring power events (Windows only)
 		},
@@ -88,6 +89,7 @@ func main() {
 		OnBeforeClose: func(ctx context.Context) (prevent bool) {
 			if !bridge.Env.PreventExit {
 				trayEnd()
+				runtime.CleanupNotifications(ctx)
 				return false
 			}
 			runtime.EventsEmit(ctx, "onBeforeExitApp")

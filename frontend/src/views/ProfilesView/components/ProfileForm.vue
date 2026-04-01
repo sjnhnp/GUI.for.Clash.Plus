@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, inject, type Ref, computed, useTemplateRef, h, defineAsyncComponent } from 'vue'
+import { ref, inject, type Ref, computed, useTemplateRef, h } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { useBool } from '@/hooks'
@@ -8,6 +8,15 @@ import { deepClone, generateConfig, stringifyNoFolding, message, alert } from '@
 
 import Button from '@/components/Button/index.vue'
 import Dropdown from '@/components/Dropdown/index.vue'
+
+import AdvancedConfig from './AdvancedConfig.vue'
+import DnsConfig from './DnsConfig.vue'
+import GeneralConfig from './GeneralConfig.vue'
+import MixinAndScript from './MixinAndScriptConfig.vue'
+import ProxyGroupsConfig from './ProxyGroupsConfig.vue'
+import RulesConfig from './RulesConfig.vue'
+import TunConfig from './TunConfig.vue'
+import SnifferConfig from './SnifferConfig.vue'
 
 interface Props {
   id?: string
@@ -19,9 +28,10 @@ enum Step {
   General = 1,
   Tun = 2,
   Dns = 3,
-  Group = 4,
-  Rules = 5,
-  MixinScript = 6,
+  Sniffer = 4,
+  Group = 5,
+  Rules = 6,
+  MixinScript = 7,
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -29,14 +39,6 @@ const props = withDefaults(defineProps<Props>(), {
   isUpdate: false,
   step: Step.Name,
 })
-
-const AdvancedConfig = defineAsyncComponent(() => import('./AdvancedConfig.vue'))
-const DnsConfig = defineAsyncComponent(() => import('./DnsConfig.vue'))
-const GeneralConfig = defineAsyncComponent(() => import('./GeneralConfig.vue'))
-const MixinAndScript = defineAsyncComponent(() => import('./MixinAndScriptConfig.vue'))
-const ProxyGroupsConfig = defineAsyncComponent(() => import('./ProxyGroupsConfig.vue'))
-const RulesConfig = defineAsyncComponent(() => import('./RulesConfig.vue'))
-const TunConfig = defineAsyncComponent(() => import('./TunConfig.vue'))
 
 const { t } = useI18n()
 const groupsRef = useTemplateRef<typeof ProxyGroupsConfig>('groupsRef')
@@ -52,6 +54,7 @@ const stepItems = [
   { title: 'profile.step.general' },
   { title: 'profile.step.tun' },
   { title: 'profile.step.dns' },
+  { title: 'profile.step.sniffer' },
   { title: 'profile.step.groups' },
   { title: 'profile.step.rules' },
   { title: 'profile.step.mixin-script' },
@@ -238,6 +241,10 @@ defineExpose({ modalSlots })
 
     <div v-if="currentStep === Step.Dns">
       <DnsConfig v-model="profile.dnsConfig" />
+    </div>
+
+    <div v-if="currentStep === Step.Sniffer">
+      <SnifferConfig v-model="profile.sniffer" />
     </div>
 
     <div v-if="currentStep === Step.Group">

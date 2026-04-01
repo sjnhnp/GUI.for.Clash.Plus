@@ -21,7 +21,7 @@ import (
 )
 
 // Version can be set at build time via -ldflags "-X 'guiforcores/bridge.Version=vX.Y.Z'"
-var Version = "v1.21.1"
+var Version = "v1.22.0"
 
 var Config = &AppConfig{}
 
@@ -110,8 +110,11 @@ func (a *App) RestartApp() FlagResult {
 	return FlagResult{true, "Success"}
 }
 
-func (a *App) GetEnv() EnvResult {
-	log.Printf("GetEnv")
+func (a *App) GetEnv(key string) any {
+	log.Printf("GetEnv: %s", key)
+	if key != "" {
+		return os.Getenv(key)
+	}
 	return EnvResult{
 		AppName:      Env.AppName,
 		AppVersion:   Env.AppVersion,
