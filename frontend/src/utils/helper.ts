@@ -13,6 +13,7 @@ import {
   WriteFile,
 } from '@/bridge'
 import { CoreWorkingDirectory } from '@/constant/kernel'
+import { OS, RequestProxyMode } from '@/enums/app'
 import { ProxyGroupType, RulesetBehavior, RulesetFormat } from '@/enums/kernel'
 import i18n from '@/lang'
 import {
@@ -25,14 +26,15 @@ import {
   useRulesetsStore,
 } from '@/stores'
 import {
+  formatProxyHost,
   ignoredError,
+  normalizeRequestProxy,
   stringifyNoFolding,
   message,
   confirm,
   APP_TITLE,
   getAutoStartConfiguration,
 } from '@/utils'
-import { OS } from '@/enums/app'
 
 // Permissions Helper
 export const SwitchPermissions = async (enable: boolean) => {
@@ -577,32 +579,56 @@ export const GetSystemProxyBypass = async () => {
   return ''
 }
 
-const proxy_cache: { proxyPromise: Promise<string> | null; lastAccessTime: number } = {
+const requestProxyCache: { proxyPromise: Promise<string> | null; lastAccessTime: number } = {
   proxyPromise: null,
   lastAccessTime: 0,
 }
 
-export const GetSystemOrKernelProxy = async () => {
-  if (useKernelApiStore().running) {
-    const kernelProxy = useKernelApiStore().getProxyPort()
-    if (kernelProxy !== undefined) {
-      if (kernelProxy.proxyType === 'socks') {
-        return `socks5://127.0.0.1:${kernelProxy.port}`
-      }
-      return `http://127.0.0.1:${kernelProxy.port}`
-    }
+export const GetRequestProxy = async (mode?: RequestProxyMode, customProxy?: string) => {
+  const appSettings = useAppSettingsStore()
+  const requestProxyMode = mode ?? appSettings.app.requestProxyMode
+
+  if (requestProxyMode === RequestProxyMode.None) {
+    return ''
   }
 
-  if (proxy_cache.proxyPromise && Date.now() - proxy_cache.lastAccessTime < 1000) {
-    return proxy_cache.proxyPromise
+  if (requestProxyMode === RequestProxyMode.Kernel) {
+    const kernelProxy = useKernelApiStore().getProxyEndpoint()
+    if (!kernelProxy) return ''
+
+    const { schema, host, port, username, password } = kernelProxy
+    const formattedHost = formatProxyHost(host)
+    const encodedUsername = encodeURIComponent(username)
+    const encodedPassword = password ? `:${encodeURIComponent(password)}` : ''
+    const auth = username || password ? `${encodedUsername}${encodedPassword}@` : ''
+
+    return `${schema}://${auth}${formattedHost}:${port}`
   }
 
-  proxy_cache.lastAccessTime = Date.now()
-  proxy_cache.proxyPromise = GetSystemProxy()
-  return proxy_cache.proxyPromise
+  if (requestProxyMode === RequestProxyMode.Custom) {
+    return normalizeRequestProxy(customProxy ?? appSettings.app.customProxy)
+  }
+
+  if (requestProxyCache.proxyPromise && Date.now() - requestProxyCache.lastAccessTime < 1000) {
+    return requestProxyCache.proxyPromise
+  }
+
+  requestProxyCache.lastAccessTime = Date.now()
+  requestProxyCache.proxyPromise = GetSystemProxy()
+  return requestProxyCache.proxyPromise
 }
 
 // Auto-start
+const getPlistPath = async () => {
+  const home = await GetEnv('HOME')
+  return `${home}/Library/LaunchAgents/${APP_TITLE}.plist`
+}
+
+const getDesktopPath = async () => {
+  const home = await GetEnv('HOME')
+  return `${home}/.config/autostart/${APP_TITLE}.desktop`
+}
+
 export const IsAutoStartEnabled = async () => {
   const { os } = useEnvStore().env
   let isAutoStart = false
@@ -611,40 +637,33 @@ export const IsAutoStartEnabled = async () => {
       .then(() => true)
       .catch(() => false)
   } else if (os === OS.Darwin) {
-    isAutoStart = await Exec('osascript', [
-      '-e',
-      `tell application "System Events" to get exists login item "${APP_TITLE}"`,
-    ])
-      .then((res) => res.includes('true'))
-      .catch(() => false)
+    const plistPath = await getPlistPath()
+    isAutoStart = await FileExists(plistPath)
   } else if (os === OS.Linux) {
-    const home = await GetEnv('HOME')
-    isAutoStart = await FileExists(`${home}/.config/autostart/${APP_TITLE}.desktop`)
+    const desktopPath = await getDesktopPath()
+    isAutoStart = await FileExists(desktopPath)
   }
   return isAutoStart
 }
 
 export const EnableAutoStart = async (delay = 10) => {
-  const { os, appPath, basePath, isPrivileged } = useEnvStore().env
+  const { os, appPath, isPrivileged } = useEnvStore().env
+  const configuration = getAutoStartConfiguration(os, appPath, delay)
   if (os === OS.Windows) {
     const xmlPath = await AbsolutePath('data/.cache/tasksch.xml')
-    const xmlContent = getAutoStartConfiguration(os, appPath, delay)
-    await WriteFile(xmlPath, xmlContent)
+    await WriteFile(xmlPath, configuration)
     const fn = isPrivileged ? Exec : RunWithPowerShell
     await fn('SchTasks', ['/Create', '/F', '/TN', APP_TITLE, '/XML', xmlPath], {
       admin: true,
       hidden: true,
     })
   } else if (os === OS.Darwin) {
-    const path = basePath.replace('/Contents/MacOS', '')
-    await Exec('osascript', [
-      '-e',
-      `tell application "System Events" to make login item at end with properties {name:"${APP_TITLE}", path:"${path}"}`,
-    ])
+    const plistPath = await getPlistPath()
+    await WriteFile(plistPath, configuration)
+    await Exec('launchctl', ['load', plistPath])
   } else if (os === OS.Linux) {
-    const desktopContent = getAutoStartConfiguration(os, appPath, delay)
-    const home = await GetEnv('HOME')
-    await WriteFile(`${home}/.config/autostart/${APP_TITLE}.desktop`, desktopContent)
+    const desktopPath = await getDesktopPath()
+    await WriteFile(desktopPath, configuration)
   }
 }
 
@@ -654,13 +673,12 @@ export const DisableAutoStart = async () => {
     const fn = isPrivileged ? Exec : RunWithPowerShell
     await fn('SchTasks', ['/Delete', '/F', '/TN', APP_TITLE], { admin: true, hidden: true })
   } else if (os === OS.Darwin) {
-    await Exec('osascript', [
-      '-e',
-      `tell application "System Events" to delete login item "${APP_TITLE}"`,
-    ])
+    const plistPath = await getPlistPath()
+    await Exec('launchctl', ['unload', plistPath])
+    await RemoveFile(plistPath)
   } else if (os === OS.Linux) {
-    const home = await GetEnv('HOME')
-    await RemoveFile(`${home}/.config/autostart/${APP_TITLE}.desktop`)
+    const desktopPath = await getDesktopPath()
+    await RemoveFile(desktopPath)
   }
 }
 

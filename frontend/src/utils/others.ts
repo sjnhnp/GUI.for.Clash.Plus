@@ -1,8 +1,8 @@
 import { stringify } from 'yaml'
 
-import { useAppSettingsStore, useEnvStore } from '@/stores'
-import { APP_TITLE, APP_VERSION } from '@/utils'
 import { OS } from '@/enums/app'
+import { useAppSettingsStore, useEnvStore } from '@/stores'
+import { APP_TITLE, APP_VERSION, isValidIPv4, isValidIPv6 } from '@/utils'
 
 export const deepClone = <T>(json: T): T => JSON.parse(JSON.stringify(json))
 
@@ -277,6 +277,27 @@ Exec=${appPath} tasksch
 Name=${APP_TITLE}`
     return desktop
   }
+  if (os === OS.Darwin) {
+    const plist = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+ "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>${APP_TITLE}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/open</string>
+        <string>${appPath}</string>
+        <string>--args</string>
+        <string>tasksch</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+</dict>
+</plist>`
+    return plist
+  }
   throw new Error('Not Implemented')
 }
 
@@ -399,6 +420,12 @@ export const readonly = <T>(obj: T): T => {
   })
 }
 
+export const normalizeErrorMessage = (error: unknown) => {
+  if (typeof error === 'string') return error
+  if (error instanceof Error) return error.message
+  return String(error)
+}
+
 export const normalizeBase64 = (str: string): string => {
   const normalized = str.trim().replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/')
 
@@ -432,6 +459,40 @@ export const base64Decode = (input: string): string => {
 export const stringifyNoFolding = (content: any) => {
   // Disable string folding
   return stringify(content, { lineWidth: 0, minContentWidth: 0 })
+}
+
+export const normalizeRequestProxy = (proxy: string) => {
+  const trimmed = proxy.trim()
+  if (!trimmed) return ''
+  if (/^[a-z][a-z\d+\-.]*:\/\//i.test(trimmed)) return trimmed
+  return `http://${trimmed}`
+}
+
+export const normalizeProxyHost = (host: string) => {
+  if (!host || ['0.0.0.0', '::', '[::]'].includes(host)) {
+    return '127.0.0.1'
+  }
+  return host
+}
+
+export const getDomainSuffixes = (host: string) => {
+  const normalizedHost = host.trim().replace(/\.+$/, '').toLowerCase()
+  if (!normalizedHost || isValidIPv4(normalizedHost) || isValidIPv6(normalizedHost)) return []
+
+  const labels = normalizedHost.split('.').filter(Boolean)
+  if (labels.length < 2) return []
+
+  return labels.slice(0, -1).map((_, index) => labels.slice(index).join('.'))
+}
+
+export const createTextMatcher = (include: string, exclude: string, flags = '') => {
+  const includeRegex = include ? buildSmartRegExp(include, flags) : null
+  const excludeRegex = exclude ? buildSmartRegExp(exclude, flags) : null
+  return (text: string) => {
+    const flag1 = includeRegex ? includeRegex.test(text) : true
+    const flag2 = excludeRegex ? excludeRegex.test(text) : false
+    return flag1 && !flag2
+  }
 }
 
 const regexCache = new Map<string, RegExp>()

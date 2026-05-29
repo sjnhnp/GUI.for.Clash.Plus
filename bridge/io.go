@@ -24,7 +24,7 @@ const (
 func (a *App) WriteFile(path string, content string, options IOOptions) FlagResult {
 	log.Printf("WriteFile [%s %s]: %s", options.Mode, options.Range, path)
 
-	fullPath := GetPath(path)
+	fullPath := resolvePath(path)
 
 	if err := os.MkdirAll(filepath.Dir(fullPath), os.ModePerm); err != nil {
 		return FlagResult{false, err.Error()}
@@ -67,7 +67,7 @@ func (a *App) WriteFile(path string, content string, options IOOptions) FlagResu
 			return FlagResult{false, err.Error()}
 		}
 	} else {
-		start, end, err = ParseRange(options.Range, fileSize)
+		start, end, err = parseByteRange(options.Range, fileSize)
 		if err != nil {
 			return FlagResult{false, err.Error()}
 		}
@@ -89,7 +89,7 @@ func (a *App) WriteFile(path string, content string, options IOOptions) FlagResu
 func (a *App) ReadFile(path string, options IOOptions) FlagResult {
 	log.Printf("ReadFile [%s %s]: %s", options.Mode, options.Range, path)
 
-	fullPath := GetPath(path)
+	fullPath := resolvePath(path)
 
 	file, err := os.Open(fullPath)
 	if err != nil {
@@ -103,12 +103,15 @@ func (a *App) ReadFile(path string, options IOOptions) FlagResult {
 	}
 	fileSize := stat.Size()
 
-	start, end, err := ParseRange(options.Range, fileSize)
+	start, end, err := parseByteRange(options.Range, fileSize)
 	if err != nil {
 		return FlagResult{false, err.Error()}
 	}
 
 	length := end - start + 1
+	if length <= 0 {
+		return FlagResult{true, ""}
+	}
 	buf := make([]byte, length)
 
 	n, err := file.ReadAt(buf, start)
@@ -130,8 +133,8 @@ func (a *App) ReadFile(path string, options IOOptions) FlagResult {
 func (a *App) MoveFile(source string, target string) FlagResult {
 	log.Printf("MoveFile: %s -> %s", source, target)
 
-	fullSource := GetPath(source)
-	fullTarget := GetPath(target)
+	fullSource := resolvePath(source)
+	fullTarget := resolvePath(target)
 
 	if err := os.MkdirAll(filepath.Dir(fullTarget), os.ModePerm); err != nil {
 		return FlagResult{false, err.Error()}
@@ -147,7 +150,7 @@ func (a *App) MoveFile(source string, target string) FlagResult {
 func (a *App) RemoveFile(path string) FlagResult {
 	log.Printf("RemoveFile: %s", path)
 
-	fullPath := GetPath(path)
+	fullPath := resolvePath(path)
 
 	if err := os.RemoveAll(fullPath); err != nil {
 		return FlagResult{false, err.Error()}
@@ -159,8 +162,8 @@ func (a *App) RemoveFile(path string) FlagResult {
 func (a *App) CopyFile(src string, dst string) FlagResult {
 	log.Printf("CopyFile: %s -> %s", src, dst)
 
-	srcPath := GetPath(src)
-	dstPath := GetPath(dst)
+	srcPath := resolvePath(src)
+	dstPath := resolvePath(dst)
 
 	srcFile, err := os.Open(srcPath)
 	if err != nil {
@@ -176,9 +179,12 @@ func (a *App) CopyFile(src string, dst string) FlagResult {
 	if err != nil {
 		return FlagResult{false, err.Error()}
 	}
-	defer dstFile.Close()
 
 	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		dstFile.Close()
+		return FlagResult{false, err.Error()}
+	}
+	if err := dstFile.Close(); err != nil {
 		return FlagResult{false, err.Error()}
 	}
 
@@ -188,7 +194,7 @@ func (a *App) CopyFile(src string, dst string) FlagResult {
 func (a *App) MakeDir(path string) FlagResult {
 	log.Printf("MakeDir: %s", path)
 
-	fullPath := GetPath(path)
+	fullPath := resolvePath(path)
 
 	if err := os.MkdirAll(fullPath, os.ModePerm); err != nil {
 		return FlagResult{false, err.Error()}
@@ -200,7 +206,7 @@ func (a *App) MakeDir(path string) FlagResult {
 func (a *App) ReadDir(path string) FlagResult {
 	log.Printf("ReadDir: %s", path)
 
-	fullPath := GetPath(path)
+	fullPath := resolvePath(path)
 
 	files, err := os.ReadDir(fullPath)
 	if err != nil {
@@ -221,7 +227,7 @@ func (a *App) ReadDir(path string) FlagResult {
 func (a *App) OpenDir(path string) FlagResult {
 	log.Printf("OpenDir: %s", path)
 
-	fullPath := GetPath(path)
+	fullPath := resolvePath(path)
 
 	err := browser.OpenURL(fullPath)
 	if err != nil {
@@ -245,7 +251,7 @@ func (a *App) OpenURI(uri string) FlagResult {
 func (a *App) AbsolutePath(path string) FlagResult {
 	log.Printf("AbsolutePath: %s", path)
 
-	absPath := GetPath(path)
+	absPath := resolvePath(path)
 
 	return FlagResult{true, absPath}
 }
@@ -253,8 +259,8 @@ func (a *App) AbsolutePath(path string) FlagResult {
 func (a *App) UnzipZIPFile(path string, output string) FlagResult {
 	log.Printf("UnzipZIPFile: %s -> %s", path, output)
 
-	fullPath := GetPath(path)
-	outputPath := GetPath(output)
+	fullPath := resolvePath(path)
+	outputPath := resolvePath(output)
 
 	archive, err := zip.OpenReader(fullPath)
 	if err != nil {
@@ -262,12 +268,9 @@ func (a *App) UnzipZIPFile(path string, output string) FlagResult {
 	}
 	defer archive.Close()
 
-	cleanOutputPath := outputPath + "/"
-
 	for _, f := range archive.File {
-		filePath := filepath.ToSlash(filepath.Clean(filepath.Join(outputPath, f.Name)))
-
-		if !strings.HasPrefix(filePath, cleanOutputPath) {
+		filePath, ok := archiveEntryPath(outputPath, f.Name)
+		if !ok {
 			continue
 		}
 
@@ -298,7 +301,9 @@ func (a *App) UnzipZIPFile(path string, output string) FlagResult {
 		}
 
 		fileInArchive.Close()
-		dstFile.Close()
+		if err := dstFile.Close(); err != nil {
+			continue
+		}
 	}
 
 	return FlagResult{true, "Success"}
@@ -307,8 +312,8 @@ func (a *App) UnzipZIPFile(path string, output string) FlagResult {
 func (a *App) UnzipTarGZFile(path string, output string) FlagResult {
 	log.Printf("UnzipTarGZFile: %s -> %s", path, output)
 
-	fullPath := GetPath(path)
-	outputPath := GetPath(output)
+	fullPath := resolvePath(path)
+	outputPath := resolvePath(output)
 
 	gzipFile, err := os.Open(fullPath)
 	if err != nil {
@@ -324,8 +329,6 @@ func (a *App) UnzipTarGZFile(path string, output string) FlagResult {
 
 	tarReader := tar.NewReader(gzipReader)
 
-	cleanOutputPath := outputPath + "/"
-
 	for {
 		header, err := tarReader.Next()
 		if err == io.EOF {
@@ -335,9 +338,8 @@ func (a *App) UnzipTarGZFile(path string, output string) FlagResult {
 			return FlagResult{false, err.Error()}
 		}
 
-		filePath := filepath.ToSlash(filepath.Clean(filepath.Join(outputPath, header.Name)))
-
-		if !strings.HasPrefix(filePath, cleanOutputPath) {
+		filePath, ok := archiveEntryPath(outputPath, header.Name)
+		if !ok {
 			continue
 		}
 
@@ -360,7 +362,9 @@ func (a *App) UnzipTarGZFile(path string, output string) FlagResult {
 			continue
 		}
 
-		dstFile.Close()
+		if err := dstFile.Close(); err != nil {
+			continue
+		}
 	}
 
 	return FlagResult{true, "Success"}
@@ -369,8 +373,8 @@ func (a *App) UnzipTarGZFile(path string, output string) FlagResult {
 func (a *App) UnzipGZFile(path string, output string) FlagResult {
 	log.Printf("UnzipGZFile: %s -> %s", path, output)
 
-	fullPath := GetPath(path)
-	outputPath := GetPath(output)
+	fullPath := resolvePath(path)
+	outputPath := resolvePath(output)
 
 	gzipFile, err := os.Open(fullPath)
 	if err != nil {
@@ -382,25 +386,44 @@ func (a *App) UnzipGZFile(path string, output string) FlagResult {
 	if err != nil {
 		return FlagResult{false, err.Error()}
 	}
-	defer outputFile.Close()
 
 	gzipReader, err := gzip.NewReader(gzipFile)
 	if err != nil {
+		outputFile.Close()
 		return FlagResult{false, err.Error()}
 	}
 	defer gzipReader.Close()
 
 	if _, err := io.Copy(outputFile, gzipReader); err != nil {
+		outputFile.Close()
+		return FlagResult{false, err.Error()}
+	}
+	if err := outputFile.Close(); err != nil {
 		return FlagResult{false, err.Error()}
 	}
 
 	return FlagResult{true, "Success"}
 }
 
+func archiveEntryPath(outputPath, entryName string) (string, bool) {
+	cleanName := filepath.Clean(filepath.FromSlash(entryName))
+	if cleanName == "." || filepath.IsAbs(cleanName) {
+		return "", false
+	}
+
+	targetPath := filepath.Join(outputPath, cleanName)
+	rel, err := filepath.Rel(outputPath, targetPath)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		return "", false
+	}
+
+	return filepath.ToSlash(targetPath), true
+}
+
 func (a *App) FileExists(path string) FlagResult {
 	log.Printf("FileExists: %s", path)
 
-	path = GetPath(path)
+	path = resolvePath(path)
 
 	_, err := os.Stat(path)
 	if err == nil {

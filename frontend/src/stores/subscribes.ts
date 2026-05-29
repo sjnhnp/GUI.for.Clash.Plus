@@ -4,7 +4,7 @@ import { parse } from 'yaml'
 
 import { ReadFile, WriteFile, Requests } from '@/bridge'
 import { DefaultSubscribeScript, SubscribesFilePath } from '@/constant/app'
-import { PluginTriggerEvent, RequestMethod } from '@/enums/app'
+import { PluginTriggerEvent, RequestMethod, RequestProxyMode } from '@/enums/app'
 import { usePluginsStore, useProfilesStore } from '@/stores'
 import {
   sampleID,
@@ -17,6 +17,8 @@ import {
   asyncPool,
   eventBus,
   buildSmartRegExp,
+  GetRequestProxy,
+  migrateSubscribes,
 } from '@/utils'
 
 import type { Subscription } from '@/types/app'
@@ -30,6 +32,8 @@ export const useSubscribesStore = defineStore('subscribes', () => {
       const parsed = parse(data)
       subscribes.value = Array.isArray(parsed) ? parsed : []
     }
+
+    await migrateSubscribes(subscribes.value, saveSubscribes)
   }
 
   const saveSubscribes = () => {
@@ -83,7 +87,7 @@ export const useSubscribesStore = defineStore('subscribes', () => {
     eventBus.emit('subscriptionChange', { id })
   }
 
-  const _doUpdateSub = async (s: Subscription) => {
+  const _doUpdateSub = async (s: Subscription, options: Partial<Subscription> = {}) => {
     const userInfo: Recordable = {}
     let body = ''
     let proxies: Record<string, any>[] = []
@@ -98,16 +102,20 @@ export const useSubscribesStore = defineStore('subscribes', () => {
 
     if (s.type === 'Http') {
       const { headers: h, body: b } = await Requests({
-        method: s.requestMethod,
-        url: s.url,
-        headers: s.header.request,
+        method: options.requestMethod ?? s.requestMethod,
+        url: options.url ?? s.url,
+        headers: { ...s.header.request, ...options.header?.request },
         autoTransformBody: false,
         options: {
-          Insecure: s.inSecure,
-          Timeout: s.requestTimeout,
+          Insecure: options.inSecure ?? s.inSecure,
+          Proxy: await GetRequestProxy(
+            options.requestProxyMode ?? s.requestProxyMode,
+            options.customProxy ?? s.customProxy,
+          ),
+          Timeout: options.requestTimeout ?? s.requestTimeout,
         },
       })
-      Object.assign(h, s.header.response)
+      Object.assign(h, s.header.response, options.header?.response)
       if (h['Subscription-Userinfo']) {
         ; (h['Subscription-Userinfo'] as string).split(/\s*;\s*/).forEach((part) => {
           const [key, value] = part.split('=') as [string, string]
@@ -144,7 +152,7 @@ export const useSubscribesStore = defineStore('subscribes', () => {
     proxies = await pluginStore.onSubscribeTrigger(proxies, s)
 
     if (proxies.some((proxy) => proxy.base64)) {
-      throw 'You need to install the [节点转换] plugin first'
+      throw 'You need to add the [节点转换] plugin first'
     }
 
     if (s.type !== 'Manual') {
@@ -219,13 +227,13 @@ export const useSubscribesStore = defineStore('subscribes', () => {
     }
   }
 
-  const updateSubscribe = async (id: string) => {
+  const updateSubscribe = async (id: string, options: Partial<Subscription> = {}) => {
     const s = subscribes.value.find((v) => v.id === id)
     if (!s) throw id + ' Not Found'
     if (s.disabled) throw s.name + ' Disabled'
     try {
       s.updating = true
-      await _doUpdateSub(s)
+      await _doUpdateSub(s, options)
       await saveSubscribes()
     } catch (error: any) {
       throw `Failed to update subscription [${s.name}]. Reason: ${error.message || error}`
@@ -293,6 +301,8 @@ export const useSubscribesStore = defineStore('subscribes', () => {
       includeProtocol: '',
       excludeProtocol: '',
       proxyPrefix: '',
+      requestProxyMode: RequestProxyMode.System,
+      customProxy: '',
       disabled: false,
       inSecure: false,
       requestMethod: RequestMethod.Get,

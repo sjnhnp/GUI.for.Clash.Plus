@@ -9,9 +9,11 @@ import type {
   WebviewGpuPolicy,
   Branch,
   ControllerCloseMode,
+  RequestProxyMode,
   PluginTrigger,
   ScheduledTasksType,
   RequestMethod,
+  OS,
 } from '@/enums/app'
 
 export interface AppEnv {
@@ -19,7 +21,7 @@ export interface AppEnv {
   appVersion: string
   basePath: string
   appPath: string
-  os: string
+  os: OS
   arch: string
   isPrivileged: boolean
 }
@@ -45,6 +47,7 @@ export interface MenuItem {
   children?: MenuItem[]
   hidden?: boolean
   checked?: boolean
+  checkable?: boolean
 }
 
 type AppSettings = {
@@ -61,11 +64,14 @@ type AppSettings = {
   scheduledtasksView: View
   windowStartState: WindowStartState
   webviewGpuPolicy: WebviewGpuPolicy
+  contentProtection: boolean
   width: number
   height: number
   exitOnClose: boolean
   closeKernelOnExit: boolean
   autoSetSystemProxy: boolean
+  requestProxyMode: RequestProxyMode
+  customProxy: string
   proxyBypassList: string
   autoStartKernel: boolean
   autoRestartKernel: boolean
@@ -99,6 +105,9 @@ type AppSettings = {
       args: string[]
     }
   }
+  plugins: {
+    sources: { enable: boolean; name: string; url: string }[]
+  }
   addPluginToMenu: boolean
   addGroupToMenu: boolean
   pluginSettings: Record<string, Record<string, any>>
@@ -110,6 +119,7 @@ type AppSettings = {
   debugNoAnimation: boolean
   debugNoRounded: boolean
   debugBorder: boolean
+  debugUsePointer: boolean
   pages: string[]
 }
 
@@ -145,6 +155,7 @@ export interface Plugin {
   triggers: PluginTrigger[]
   tags: string[]
   hasUI: boolean
+  group: string
   menus: Record<string, string>
   context: {
     profiles: Recordable
@@ -155,8 +166,6 @@ export interface Plugin {
   }
   configuration: PluginConfiguration[]
   disabled: boolean
-  install: boolean
-  installed: boolean
   status: number // 0: Normal 1: Running 2: Stopped
   // Not Config
   updating?: boolean
@@ -196,6 +205,8 @@ export interface Subscription {
   includeProtocol: string
   excludeProtocol: string
   proxyPrefix: string
+  requestProxyMode: RequestProxyMode
+  customProxy: string
   disabled: boolean
   inSecure: boolean
   proxies: { id: string; name: string; type: string }[]

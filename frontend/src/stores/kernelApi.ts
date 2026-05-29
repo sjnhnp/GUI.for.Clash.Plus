@@ -13,7 +13,12 @@ import {
   destroyWebsocket,
 } from '@/api/kernel'
 import { ProcessInfo, KillProcess, ExecBackground, ReadFile, RemoveFile } from '@/bridge'
-import { CorePidFilePath, CoreStopOutputKeyword, CoreWorkingDirectory } from '@/constant/kernel'
+import {
+  CoreLogFilePath,
+  CorePidFilePath,
+  CoreStopOutputKeyword,
+  CoreWorkingDirectory,
+} from '@/constant/kernel'
 import { Branch } from '@/enums/app'
 import { RuleType } from '@/enums/kernel'
 import {
@@ -29,6 +34,7 @@ import {
   generateConfigFile,
   updateTrayAndMenus,
   getKernelFileName,
+  normalizeProxyHost,
   message,
   getKernelRuntimeArgs,
   getKernelRuntimeEnv,
@@ -38,6 +44,14 @@ import {
 import type { CoreApiConfig, CoreApiProxy } from '@/types/kernel'
 
 export type ProxyType = 'mixed' | 'http' | 'socks'
+export type ProxyEndpoint = {
+  schema: 'http' | 'socks5'
+  host: string
+  port: number
+  username: string
+  password: string
+  proxyType: ProxyType
+}
 
 export const useKernelApiStore = defineStore('kernelApi', () => {
   const envStore = useEnvStore()
@@ -67,6 +81,18 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
 
   const refreshConfig = async () => {
     config.value = await getConfigs()
+  }
+
+  const resetConfig = () => {
+    config.value.port = 0
+    config.value['socks-port'] = 0
+    config.value['mixed-port'] = 0
+    config.value['interface-name'] = ''
+    config.value['allow-lan'] = false
+    config.value.mode = ''
+    config.value.tun.enable = false
+    config.value.tun.stack = ''
+    config.value.tun.device = ''
   }
 
   const updateConfig = async (options: Record<string, any>) => {
@@ -127,6 +153,7 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
         },
         {
           PidFile: CorePidFilePath,
+          LogFile: CoreLogFilePath,
           StopOutputKeyword: CoreStopOutputKeyword,
           Env: getKernelRuntimeEnv(isAlpha),
         },
@@ -161,6 +188,7 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
     running.value = false
     needRestart.value = false
 
+    resetConfig()
     destroyWebsocket()
 
     await envStore.updateSystemProxyStatus()
@@ -219,33 +247,54 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
     }
   }
 
-  const getProxyPort = ():
-    | {
-      port: number
-      proxyType: ProxyType
+  const getProxyProfileOptions = () => {
+    const controller = profilesStore.currentProfile?.advancedConfig['external-controller']?.trim()
+    const auth = profilesStore.currentProfile?.advancedConfig.authentication[0]?.trim()
+    const rawHost = controller?.startsWith('[')
+      ? controller.match(/^\[([^\]]+)\](?::\d+)?$/)?.[1]
+      : controller?.slice(0, Math.max(controller.lastIndexOf(':'), 0)) || controller
+    const host = normalizeProxyHost(rawHost?.trim() || '')
+
+    if (!auth) return { host, username: '', password: '' }
+
+    const [username, ...passwordParts] = auth.split(':')
+
+    return {
+      host,
+      username: username || '',
+      password: passwordParts.join(':'),
     }
-    | undefined => {
+  }
+
+  const getProxyEndpoint = (): ProxyEndpoint | undefined => {
     const { port, 'socks-port': socksPort, 'mixed-port': mixedPort } = config.value
+    const { host, username, password } = getProxyProfileOptions()
+    let targetPort = 0
+    let proxyType: ProxyType | undefined
 
     if (mixedPort) {
-      return {
-        port: mixedPort,
-        proxyType: 'mixed',
-      }
+      targetPort = mixedPort
+      proxyType = 'mixed'
+    } else if (port) {
+      targetPort = port
+      proxyType = 'http'
+    } else if (socksPort) {
+      targetPort = socksPort
+      proxyType = 'socks'
+    } else {
+      return undefined
     }
-    if (port) {
-      return {
-        port,
-        proxyType: 'http',
-      }
+
+    const schema = proxyType === 'socks' ? 'socks5' : 'http'
+
+    return {
+      schema,
+      host,
+      port: targetPort,
+      username,
+      password,
+      proxyType,
     }
-    if (socksPort) {
-      return {
-        port: socksPort,
-        proxyType: 'socks',
-      }
-    }
-    return undefined
   }
 
   eventBus.on('profileChange', ({ id }) => {
@@ -348,7 +397,7 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
     refreshConfig,
     updateConfig,
     refreshProviderProxies,
-    getProxyPort,
+    getProxyEndpoint,
 
     onLogs,
     onMemory,

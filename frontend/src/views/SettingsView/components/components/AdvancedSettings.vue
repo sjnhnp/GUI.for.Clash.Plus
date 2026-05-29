@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import { MakeDir, OpenDir } from '@/bridge'
 import { RollingReleaseDirectory } from '@/constant/app'
+import { OS } from '@/enums/app'
 import { useAppSettingsStore, useEnvStore } from '@/stores'
-import { APP_TITLE, APP_VERSION } from '@/utils'
 
 const appSettings = useAppSettingsStore()
 const envStore = useEnvStore()
@@ -14,14 +14,6 @@ const handleOpenFolder = async () => {
 const handleOpenRollingReleaseFolder = async () => {
   await MakeDir(RollingReleaseDirectory)
   await OpenDir(RollingReleaseDirectory)
-}
-
-const handleClearApiToken = () => {
-  appSettings.app.githubApiToken = ''
-}
-
-const handleClearUserAgent = () => {
-  appSettings.app.userAgent = ''
 }
 </script>
 
@@ -123,6 +115,13 @@ const handleClearUserAgent = () => {
         <span class="font-normal text-12">({{ $t('settings.needRestart') }})</span>
       </div>
       <Switch v-model="appSettings.app.multipleInstance" />
+    </div>
+    <div v-platform="[OS.Windows, OS.Darwin]" class="px-8 py-12 flex items-center justify-between">
+      <div class="text-16 font-bold">
+        {{ $t('settings.contentProtection') }}
+        <span class="font-normal text-12">({{ $t('settings.contentProtectionTips') }})</span>
+      </div>
+      <Switch v-model="appSettings.app.contentProtection" />
     </div>
   </Card>
 </template>
