@@ -350,7 +350,6 @@ if (envStore.env.os === OS.Windows) {
         class="min-w-256"
       />
     </div>
-    </div>
     <div v-platform="[OS.Linux]" class="px-8 py-12 flex items-center justify-between">
       <div class="text-16 font-bold">
         {{ $t('settings.webviewGpuPolicy.name') }}
