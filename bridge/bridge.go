@@ -305,7 +305,7 @@ func extractFiles(fs embed.FS, srcDir, dstDir string) {
 
 // extractSpecificFile extracts a specific file from the embedded filesystem
 func extractSpecificFile(fs embed.FS, srcDir, srcFileName, dstDir, dstFileName string) {
-	dstPath := GetPath(dstDir + "/" + dstFileName)
+	dstPath := resolvePath(dstDir + "/" + dstFileName)
 	if _, err := os.Stat(dstPath); os.IsNotExist(err) {
 		data, err := fs.ReadFile(srcDir + "/" + srcFileName)
 		if err != nil {
