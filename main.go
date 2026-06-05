@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"embed"
+	_ "image/jpeg"
+	_ "image/png"
 	"guiforcores/bridge"
 	"time"
 
@@ -19,7 +21,7 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
-//go:embed frontend/dist/favicon.ico
+//go:embed build/appicon.png
 var icon []byte
 
 func main() {
