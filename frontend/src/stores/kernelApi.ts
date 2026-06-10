@@ -11,14 +11,10 @@ import {
   onConnections,
   initWebsocket,
   destroyWebsocket,
+  probeApiAvailability,
 } from '@/api/kernel'
 import { ProcessInfo, KillProcess, ExecBackground, ReadFile, RemoveFile } from '@/bridge'
-import {
-  CoreLogFilePath,
-  CorePidFilePath,
-  CoreStopOutputKeyword,
-  CoreWorkingDirectory,
-} from '@/constant/kernel'
+import { CoreLogFilePath, CorePidFilePath, CoreWorkingDirectory } from '@/constant/kernel'
 import { Branch } from '@/enums/app'
 import { RuleType } from '@/enums/kernel'
 import {
@@ -39,6 +35,7 @@ import {
   getKernelRuntimeArgs,
   getKernelRuntimeEnv,
   eventBus,
+  sleep,
 } from '@/utils'
 
 import type { CoreApiConfig, CoreApiProxy } from '@/types/kernel'
@@ -134,31 +131,41 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
     }
   }
 
-  const runCoreProcess = (isAlpha: boolean) => {
-    return new Promise<number | void>((resolve, reject) => {
-      let output: string
-      const pid = ExecBackground(
-        CoreWorkingDirectory + '/' + getKernelFileName(isAlpha),
-        getKernelRuntimeArgs(isAlpha),
-        (out) => {
-          output = out
-          logsStore.recordKernelLog(out)
-          if (out.includes(CoreStopOutputKeyword)) {
-            resolve(pid)
-          }
-        },
-        () => {
-          onCoreStopped()
-          reject(output)
-        },
-        {
-          PidFile: CorePidFilePath,
-          LogFile: CoreLogFilePath,
-          StopOutputKeyword: CoreStopOutputKeyword,
-          Env: getKernelRuntimeEnv(isAlpha),
-        },
-      ).catch((e) => reject(e))
-    })
+  const runCoreProcess = async (isAlpha: boolean, tunEnabled: boolean) => {
+    let stopped = false
+    const pid = await ExecBackground(
+      CoreWorkingDirectory + '/' + getKernelFileName(isAlpha),
+      getKernelRuntimeArgs(isAlpha),
+      undefined,
+      async (end) => {
+        stopped = true
+        const logs = await ReadFile(CoreLogFilePath, { Range: '-4096' }).catch((err) => String(err))
+        logs.split('\n').forEach((line) => line && logsStore.recordKernelLog(line))
+        end && logsStore.recordKernelLog(end)
+        onCoreStopped()
+      },
+      {
+        PidFile: CorePidFilePath,
+        LogFile: CoreLogFilePath,
+        Env: getKernelRuntimeEnv(isAlpha),
+      },
+    )
+    while (!stopped) {
+      const ok = await probeApiAvailability().catch(() => false)
+      if (ok) break
+      if (stopped) throw 'Startup failed. Check logs for details.'
+    }
+    const start = Date.now()
+    while (tunEnabled) {
+      const config = await getConfigs().catch(() => null)
+      if (config?.tun?.enable) break
+      if (Date.now() - start >= 5_000) {
+        message.warn('TUN mode failed to start. Please check administrator permissions.')
+        break
+      }
+      await sleep(500)
+    }
+    return pid
   }
 
   const onCoreStarted = async (pid: number) => {
@@ -217,7 +224,7 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
         pluginsStore.onBeforeCoreStartTrigger(config, profile),
       )
       const isAlpha = branch === Branch.Alpha
-      const pid = await runCoreProcess(isAlpha)
+      const pid = await runCoreProcess(isAlpha, profile.tunConfig.enable)
       pid && (await onCoreStarted(pid))
     } finally {
       starting.value = false

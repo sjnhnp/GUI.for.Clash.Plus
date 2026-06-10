@@ -155,7 +155,7 @@ export interface Plugin {
   triggers: PluginTrigger[]
   tags: string[]
   hasUI: boolean
-  group: string
+  group?: string
   menus: Record<string, string>
   context: {
     profiles: Recordable
@@ -171,6 +171,8 @@ export interface Plugin {
   updating?: boolean
   loading?: boolean
   running?: boolean
+  install?: boolean
+  installed?: boolean
 }
 
 export interface ScheduledTask {
