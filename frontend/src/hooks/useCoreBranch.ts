@@ -96,7 +96,7 @@ export const useCoreBranch = (isAlpha = false) => {
       const assetName = getKernelAssetFileName(isAlpha ? remoteVersion.value : tag_name, cpuLevel)
       const asset = assets.find((v: any) => v.name === assetName)
       if (!asset) throw 'Asset Not Found:' + assetName
-      if (asset.uploader.type !== 'Bot') {
+      if (asset.uploader.login !== 'github-actions[bot]') {
         await confirm('common.warning', 'settings.kernel.risk', {
           type: 'text',
           okText: 'settings.kernel.stillDownload',
@@ -121,7 +121,10 @@ export const useCoreBranch = (isAlpha = false) => {
           const txt = t('common.downloading') + ((progress / total) * 100).toFixed(2) + '%'
           downloadProgress.value = txt
         },
-        { CancelId: downloadCacheFile },
+        {
+          CancelId: downloadCacheFile,
+          Sha256: asset.digest.slice(7),
+        },
       )
 
       await ignoredError(MoveFile, CoreFilePath, CoreBakFilePath)

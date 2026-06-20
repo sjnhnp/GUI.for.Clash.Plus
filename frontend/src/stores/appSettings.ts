@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import { parse, stringify } from 'yaml'
 
 import {
+  GetSystemProxyBypass,
   ReadFile,
   WriteFile,
   WindowIsMaximised,
@@ -34,13 +35,7 @@ import {
 } from '@/enums/app'
 import i18n, { loadLocale } from '@/lang'
 import { useAppStore, useEnvStore } from '@/stores'
-import {
-  debounce,
-  updateTrayAndMenus,
-  ignoredError,
-  GetSystemProxyBypass,
-  deepClone,
-} from '@/utils'
+import { debounce, updateTrayAndMenus, ignoredError, deepClone, message } from '@/utils'
 
 import type { AppSettings } from '@/types/app'
 
@@ -73,6 +68,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     requestProxyMode: RequestProxyMode.System,
     customProxy: '',
     proxyBypassList: '',
+    darwinSystemProxyServices: ['Ethernet', 'Wi-Fi'],
     autoStartKernel: false,
     autoRestartKernel: false,
     restartKernelAfterResume: true, // Restart kernel after system resume from hibernation
@@ -104,6 +100,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     pluginSettings: {},
     githubApiToken: '',
     githubProxy: '',
+    githubDownloadAcceleration: false,
+    githubDownloadMirror: '',
     multipleInstance: false,
     rollingRelease: true,
     debugOutline: false,
@@ -134,13 +132,25 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       settings.kernel.alpha = DefaultCoreConfig()
     }
     if (!settings.proxyBypassList) {
-      settings.proxyBypassList = await GetSystemProxyBypass()
+      settings.proxyBypassList = (await ignoredError(GetSystemProxyBypass)) || ''
+    }
+    if (!settings.darwinSystemProxyServices) {
+      settings.darwinSystemProxyServices = ['Ethernet', 'Wi-Fi']
     }
     if (!settings.requestProxyMode) {
       settings.requestProxyMode = RequestProxyMode.System
     }
     if (settings.customProxy === undefined) {
       settings.customProxy = ''
+    }
+    if (settings.githubDownloadAcceleration === undefined) {
+      settings.githubDownloadAcceleration = false
+    }
+    if (settings.githubDownloadMirror === undefined) {
+      settings.githubDownloadMirror = ''
+    }
+    if (settings.githubProxy === undefined) {
+      settings.githubProxy = ''
     }
     if (!settings.plugins) {
       settings.plugins = {
@@ -199,7 +209,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     },
     systemProxyBypass() {
       if (envStore.systemProxy) {
-        envStore.setSystemProxy()
+        envStore.setSystemProxy().catch((err) => message.error(err))
       }
     },
   }
@@ -275,7 +285,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   const setSystemProxyBypass = debounce(() => {
     applyAppSettings.systemProxyBypass()
   }, 3000)
-  watch(() => app.value.proxyBypassList, setSystemProxyBypass)
+  watch(() => [app.value.proxyBypassList, app.value.darwinSystemProxyServices], setSystemProxyBypass)
 
   return { setupAppSettings, app, themeMode }
 })

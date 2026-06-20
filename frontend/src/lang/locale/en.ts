@@ -211,6 +211,7 @@ export default {
     rules: {
       insertionPoint: 'The new rule will be inserted here',
       addInsertionPoint: 'Add insertion point',
+      missingInsertionPoint: 'Please add an insertion point first',
       payload: 'Payload',
       proxy: 'Proxy',
       'no-resolve': 'No Resolve',
@@ -393,6 +394,9 @@ export default {
     empty: 'The subscription list is empty. Please{action}a subscription first.',
     enterLink: 'Enter subscription link',
     proxyCount: 'Proxy Count',
+    updateDirect: 'Update directly',
+    updateSystemProxy: 'Update via system proxy',
+    updateKernelProxy: 'Update via core proxy',
     editProxies: 'Edit Proxies',
     editSourceFile: 'Edit Proxies(Source)',
     copySub: 'Copy Link',
@@ -475,6 +479,7 @@ export default {
     empty: 'The ruleset list is empty. Please{action}or import from the{import}first.',
     rulesetCount: 'Ruleset Count',
     editRuleset: 'Edit Rules',
+    addToProfile: 'Add to Profile',
     selectRuleType: 'Select Rule Type',
   },
   plugin: {
@@ -630,6 +635,7 @@ export default {
     autoSetSystemProxy: 'Auto-configure System Proxy',
     requestProxy: {
       name: 'Request Proxy',
+      global: 'Follow app',
       none: 'No proxy',
       system: 'Use system proxy',
       kernel: 'Use core proxy',
@@ -640,6 +646,7 @@ export default {
     },
     proxyBypassList: 'Proxy Bypass List',
     proxyBypassListTips: 'Separate with semicolons',
+    darwinSystemProxyServices: 'Proxy Network Service Names',
     autoStartKernel: 'Start core on launch',
     realMemoryUsage: 'Show actual core memory usage',
     autoRestartKernel: {
@@ -704,6 +711,12 @@ export default {
     githubProxy: {
       name: 'GitHub Download Proxy',
       tips: 'Accelerate kernel downloads, leave empty for direct connection',
+    },
+    githubDownloadAcceleration: {
+      name: 'GitHub Download Acceleration',
+      tips: 'Accelerates GitHub resources',
+      mirror: 'GitHub Mirror',
+      reset: 'Reset mirror',
     },
   },
   about: {

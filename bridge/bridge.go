@@ -21,7 +21,7 @@ import (
 )
 
 // Version can be set at build time via -ldflags "-X 'guiforcores/bridge.Version=vX.Y.Z'"
-var Version = "v1.22.0"
+var Version = "v1.25.2"
 
 var Config = &AppConfig{}
 

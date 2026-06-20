@@ -34,12 +34,24 @@ export function FileExists(arg1) {
   return window['go']['bridge']['App']['FileExists'](arg1);
 }
 
+export function FileSHA256(arg1) {
+  return window['go']['bridge']['App']['FileSHA256'](arg1);
+}
+
 export function GetEnv(arg1) {
   return window['go']['bridge']['App']['GetEnv'](arg1);
 }
 
 export function GetInterfaces() {
   return window['go']['bridge']['App']['GetInterfaces']();
+}
+
+export function GetSystemProxy() {
+  return window['go']['bridge']['App']['GetSystemProxy']();
+}
+
+export function GetSystemProxyBypass() {
+  return window['go']['bridge']['App']['GetSystemProxyBypass']();
 }
 
 export function IsStartup() {
@@ -104,6 +116,10 @@ export function Requests(arg1, arg2, arg3, arg4, arg5) {
 
 export function RestartApp() {
   return window['go']['bridge']['App']['RestartApp']();
+}
+
+export function SetSystemProxy(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['bridge']['App']['SetSystemProxy'](arg1, arg2, arg3, arg4, arg5);
 }
 
 export function ShowMainWindow() {

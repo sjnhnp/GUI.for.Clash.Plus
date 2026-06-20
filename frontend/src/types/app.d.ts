@@ -73,6 +73,7 @@ type AppSettings = {
   requestProxyMode: RequestProxyMode
   customProxy: string
   proxyBypassList: string
+  darwinSystemProxyServices: string[]
   autoStartKernel: boolean
   autoRestartKernel: boolean
   restartKernelAfterResume: boolean
@@ -113,6 +114,8 @@ type AppSettings = {
   pluginSettings: Record<string, Record<string, any>>
   githubApiToken: string
   githubProxy: string
+  githubDownloadAcceleration: boolean
+  githubDownloadMirror: string
   multipleInstance: boolean
   rollingRelease: boolean
   debugOutline: boolean

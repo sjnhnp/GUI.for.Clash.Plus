@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"compress/gzip"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -535,4 +536,31 @@ func (a *App) WriteExternalFile(path string, content string) FlagResult {
 	}
 
 	return FlagResult{true, "Success"}
+}
+
+func (a *App) FileSHA256(path string) FlagResult {
+	log.Printf("FileSHA256: %s", path)
+
+	fullPath := resolvePath(path)
+
+	file, err := os.Open(fullPath)
+	if err != nil {
+		return FlagResult{false, err.Error()}
+	}
+	defer file.Close()
+
+	stat, err := file.Stat()
+	if err != nil {
+		return FlagResult{false, err.Error()}
+	}
+	if stat.IsDir() {
+		return FlagResult{false, "path is a directory"}
+	}
+
+	hash := sha256.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return FlagResult{false, err.Error()}
+	}
+
+	return FlagResult{true, fmt.Sprintf("%x", hash.Sum(nil))}
 }

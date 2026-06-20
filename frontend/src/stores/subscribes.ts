@@ -101,6 +101,7 @@ export const useSubscribesStore = defineStore('subscribes', () => {
     }
 
     if (s.type === 'Http') {
+      const requestProxyMode = options.requestProxyMode ?? s.requestProxyMode
       const { headers: h, body: b } = await Requests({
         method: options.requestMethod ?? s.requestMethod,
         url: options.url ?? s.url,
@@ -109,8 +110,10 @@ export const useSubscribesStore = defineStore('subscribes', () => {
         options: {
           Insecure: options.inSecure ?? s.inSecure,
           Proxy: await GetRequestProxy(
-            options.requestProxyMode ?? s.requestProxyMode,
-            options.customProxy ?? s.customProxy,
+            requestProxyMode === RequestProxyMode.Global ? undefined : requestProxyMode,
+            requestProxyMode === RequestProxyMode.Global
+              ? undefined
+              : (options.customProxy ?? s.customProxy),
           ),
           Timeout: options.requestTimeout ?? s.requestTimeout,
         },
@@ -301,7 +304,7 @@ export const useSubscribesStore = defineStore('subscribes', () => {
       includeProtocol: '',
       excludeProtocol: '',
       proxyPrefix: '',
-      requestProxyMode: RequestProxyMode.System,
+      requestProxyMode: RequestProxyMode.Global,
       customProxy: '',
       disabled: false,
       inSecure: false,
