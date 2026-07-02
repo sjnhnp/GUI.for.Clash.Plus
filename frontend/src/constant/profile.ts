@@ -2,7 +2,6 @@ import { ProxyGroup, RulesetBehavior, RulesetFormat, RuleType, TunStack } from '
 import i18n from '@/lang'
 import { generateSecureKey, sampleID } from '@/utils'
 
-
 import { DefaultTestURL } from './app'
 
 const { t } = i18n.global
@@ -16,7 +15,7 @@ const DefaultOutboundIds = {
   Global: 'outbound-global',
 }
 
-export const GeneralConfigDefaults = (): IProfile['generalConfig'] => ({
+export const GeneralConfigDefaults = (): App.Profile['generalConfig'] => ({
   mode: 'rule',
   ipv6: true,
   'mixed-port': 20112,
@@ -25,7 +24,7 @@ export const GeneralConfigDefaults = (): IProfile['generalConfig'] => ({
   'interface-name': '',
 })
 
-export const AdvancedConfigDefaults = (): IProfile['advancedConfig'] => ({
+export const AdvancedConfigDefaults = (): App.Profile['advancedConfig'] => ({
   port: 0,
   'socks-port': 0,
   secret: generateSecureKey(),
@@ -64,7 +63,7 @@ export const AdvancedConfigDefaults = (): IProfile['advancedConfig'] => ({
   'lan-disallowed-ips': [],
 })
 
-export const TunConfigDefaults = (): IProfile['tunConfig'] => ({
+export const TunConfigDefaults = (): App.Profile['tunConfig'] => ({
   enable: false,
   stack: TunStack.Mixed,
   'auto-route': true,
@@ -78,7 +77,7 @@ export const TunConfigDefaults = (): IProfile['tunConfig'] => ({
   'endpoint-independent-nat': false,
 })
 
-export const DnsConfigDefaults = (): IProfile['dnsConfig'] => ({
+export const DnsConfigDefaults = (): App.Profile['dnsConfig'] => ({
   enable: true,
   listen: '',
   ipv6: true,
@@ -120,7 +119,7 @@ export const DnsConfigDefaults = (): IProfile['dnsConfig'] => ({
   hosts: {},
 })
 
-export const ProxyGroupsConfigDefaults = (): IProfile['proxyGroupsConfig'] => {
+export const ProxyGroupsConfigDefaults = (): App.Profile['proxyGroupsConfig'] => {
   return [
     {
       id: DefaultOutboundIds.Select,
@@ -276,7 +275,7 @@ export const ProxyGroupsConfigDefaults = (): IProfile['proxyGroupsConfig'] => {
   ]
 }
 
-export const RulesConfigDefaults = (): IProfile['rulesConfig'] => [
+export const RulesConfigDefaults = (): App.Profile['rulesConfig'] => [
   {
     id: RuleType.InsertionPoint,
     type: RuleType.InsertionPoint,
@@ -409,7 +408,7 @@ export const RulesConfigDefaults = (): IProfile['rulesConfig'] => [
   },
 ]
 
-export const SnifferDefaults = (): IProfile['sniffer'] => ({
+export const SnifferDefaults = (): App.Profile['sniffer'] => ({
   enable: true,
   'force-dns-mapping': true,
   'parse-pure-ip': true,
@@ -434,12 +433,12 @@ export const SnifferDefaults = (): IProfile['sniffer'] => ({
   },
 })
 
-export const MixinConfigDefaults = (): IProfile['mixinConfig'] => {
+export const MixinConfigDefaults = (): App.Profile['mixinConfig'] => {
   return { priority: 'mixin', format: 'json', config: '' }
 }
 
-export const ScriptConfigDefaults = (): IProfile['scriptConfig'] => {
+export const ScriptConfigDefaults = (): App.Profile['scriptConfig'] => {
   return { code: `const onGenerate = async (config) => {\n  return config\n}` }
 }
 
-export const SubRulesConfigDefaults = (): IProfile['subRulesConfig'] => ({})
+export const SubRulesConfigDefaults = (): App.Profile['subRulesConfig'] => ({})

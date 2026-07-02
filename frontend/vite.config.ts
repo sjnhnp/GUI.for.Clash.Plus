@@ -1,6 +1,5 @@
-import { fileURLToPath, URL } from 'node:url'
-
 import vue from '@vitejs/plugin-vue'
+import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 
 // https://vitejs.dev/config/
@@ -21,12 +20,26 @@ export default defineConfig({
     },
   },
   build: {
+    cssCodeSplit: false,
     // Target Safari 14 (macOS 11 Big Sur) for maximum compatibility
     // Safari 14 doesn't support many ES2022+ features like Array.at(), Object.hasOwn()
     target: ['es2020', 'safari14', 'chrome87', 'firefox78'],
     assetsInlineLimit: 100 * 1024, // 100KB
     chunkSizeWarningLimit: 4096, // 4MB
-    cssCodeSplit: false,
+    rolldownOptions: {
+      output: {
+        strictExecutionOrder: true,
+        codeSplitting: {
+          groups: [
+            { name: 'vue', test: /node_modules\/vue/ },
+            { name: 'codemirror', test: /node_modules\/@codemirror/ },
+            { name: 'prettier', test: /node_modules\/prettier/ },
+            { name: 'vendor', test: /node_modules/ },
+            { name: 'index' },
+          ],
+        },
+      },
+    },
   },
   esbuild: {
     // Production optimizations: remove console.log and debugger in production

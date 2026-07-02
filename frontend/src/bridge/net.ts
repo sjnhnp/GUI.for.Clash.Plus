@@ -1,4 +1,4 @@
-import * as App from '@wails/go/bridge/App'
+import * as Bridge from '@wails/go/bridge/App'
 import { EventsOn, EventsOff, EventsEmit } from '@wails/runtime/runtime'
 
 import { RequestMethod } from '@/enums/app'
@@ -10,8 +10,29 @@ interface NetOptions {
   Timeout?: number
 }
 
+type StreamEvent =
+  | {
+      type: 'response'
+      status: number
+      headers: Record<string, string | string[]>
+    }
+  | {
+      type: 'message'
+      event: string
+      data: string
+      id?: string
+      retry?: number
+    }
+  | {
+      type: 'done'
+    }
+  | {
+      type: 'error'
+      error: string
+    }
+
 interface Request {
-  method: RequestMethod
+  method: App.RequestMethod
   url: string
   headers?: {
     'Content-Type'?: 'application/json' | 'application/x-www-form-urlencoded' | 'text/plain'
@@ -25,6 +46,7 @@ interface Request {
     CancelId?: string
     FileField?: string
     Sha256?: string
+    Stream?: string
   }
 }
 
@@ -49,12 +71,15 @@ const mergeRequestOptions = async (options: Request['options']) => {
     CancelId: '',
     FileField: 'file',
     Sha256: '',
+    Stream: '',
     ...options,
   }
   return mergedReqOpts
 }
 
-const transformResponseHeaders = (headers: Record<string, string[]>): Response['headers'] => {
+const transformResponseHeaders = (
+  headers: Record<string, string | string[]>,
+): Response['headers'] => {
   return Object.fromEntries(
     Object.entries(headers).map(([key, value]) => [key, value.length > 1 ? value : value[0]!]),
   )
@@ -130,7 +155,7 @@ const requestWithProgress = (fnName: 'Download' | 'Upload') => {
       status,
       headers: respHeaders,
       body: respBody,
-    } = await App[fnName](
+    } = await Bridge[fnName](
       method,
       transformRequestUrl(url),
       path,
@@ -149,7 +174,7 @@ const requestWithProgress = (fnName: 'Download' | 'Upload') => {
   }
 }
 
-const requestWithBody = (method: RequestMethod.Put | RequestMethod.Post | RequestMethod.Patch) => {
+const requestWithBody = (method: Extract<App.RequestMethod, 'PUT' | 'POST' | 'PATCH'>) => {
   return async <T = any>(
     url: string,
     headers: Request['headers'] = {},
@@ -163,7 +188,7 @@ const requestWithBody = (method: RequestMethod.Put | RequestMethod.Post | Reques
       status,
       headers: respHeaders,
       body: respBody,
-    } = await App.Requests(method, transformRequestUrl(url), _headers, _body, _options)
+    } = await Bridge.Requests(method, transformRequestUrl(url), _headers, _body, _options)
 
     if (!flag) throw respBody
 
@@ -172,7 +197,7 @@ const requestWithBody = (method: RequestMethod.Put | RequestMethod.Post | Reques
 }
 
 const requestWithoutBody = (
-  methd: RequestMethod.Get | RequestMethod.Head | RequestMethod.Delete,
+  methd: Extract<App.RequestMethod, 'GET' | 'HEAD' | 'DELETE'>,
 ) => {
   return async <T = any>(
     url: string,
@@ -186,7 +211,7 @@ const requestWithoutBody = (
       status,
       headers: respHeaders,
       body,
-    } = await App.Requests(methd, transformRequestUrl(url), _headers, '', _options)
+    } = await Bridge.Requests(methd, transformRequestUrl(url), _headers, '', _options)
 
     if (!flag) throw body
 
@@ -196,19 +221,33 @@ const requestWithoutBody = (
 
 interface RequestWithAutoTransform extends Request {
   autoTransformBody?: boolean
+  onStream?: (e: StreamEvent) => void
 }
 
 export const Requests = async <T = any>(options: RequestWithAutoTransform) => {
   const { method = 'GET', url, headers = {}, body = '', options: reqOpts = {} } = options
 
   const [reqHeaders, reqBody, finalReqOpts] = await transformRequest(headers, body, reqOpts)
+  const streamEvent = (options.onStream && sampleID()) || ''
+  finalReqOpts.Stream = streamEvent
+
+  if (streamEvent) {
+    EventsOn(streamEvent, (e: StreamEvent) => {
+      if (e.type == 'response') {
+        e.headers = transformResponseHeaders(e.headers)
+      } else if (e.type == 'error' || e.type == 'done') {
+        EventsOff(streamEvent)
+      }
+      options.onStream!(e)
+    })
+  }
 
   const {
     flag,
     status,
     headers: respHeaders,
     body: respBody,
-  } = await App.Requests(
+  } = await Bridge.Requests(
     method.toUpperCase(),
     transformRequestUrl(url),
     reqHeaders,
@@ -242,19 +281,19 @@ export const HttpPatch = requestWithBody(RequestMethod.Patch)
 export const HttpCancel = (cancelId: string) => EventsEmit(cancelId)
 
 export const TcpPing = async (address: string, options: NetOptions = {}) => {
-  const { flag, data } = await App.TcpPing(address, mergeNetOptions(options))
+  const { flag, data } = await Bridge.TcpPing(address, mergeNetOptions(options))
   if (!flag) throw data
   return Number(data)
 }
 
 export const TcpRequest = async (address: string, payload: string, options: NetOptions = {}) => {
-  const { flag, data } = await App.TcpRequest(address, payload, mergeNetOptions(options))
+  const { flag, data } = await Bridge.TcpRequest(address, payload, mergeNetOptions(options))
   if (!flag) throw data
   return data
 }
 
 export const UdpRequest = async (address: string, payload: string, options: NetOptions = {}) => {
-  const { flag, data } = await App.UdpRequest(address, payload, mergeNetOptions(options))
+  const { flag, data } = await Bridge.UdpRequest(address, payload, mergeNetOptions(options))
   if (!flag) throw data
   return data
 }

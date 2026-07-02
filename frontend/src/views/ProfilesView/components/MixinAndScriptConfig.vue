@@ -7,13 +7,13 @@ import { MixinConfigDefaults, ScriptConfigDefaults } from '@/constant/profile'
 import { message } from '@/utils'
 
 const model = defineModel<{
-  mixin: IProfile['mixinConfig']
-  script: IProfile['scriptConfig']
+  mixin: App.Profile['mixinConfig']
+  script: App.Profile['scriptConfig']
 }>({
-  default: {
+  default: () => ({
     mixin: MixinConfigDefaults(),
     script: ScriptConfigDefaults(),
-  },
+  }),
 })
 
 const { t } = useI18n()
@@ -67,10 +67,10 @@ const onFormatChange = (val: 'json' | 'yaml', old: 'json' | 'yaml') => {
           @change="onFormatChange"
         />
       </div>
-      <CodeViewer v-model="model.mixin.config" :lang="model.mixin.format" editable />
+      <CodeEditor v-model="model.mixin.config" :lang="model.mixin.format" editable />
     </template>
     <template #script>
-      <CodeViewer v-model="model.script.code" lang="javascript" editable />
+      <CodeEditor v-model="model.script.code" lang="javascript" editable />
     </template>
   </Tabs>
 </template>

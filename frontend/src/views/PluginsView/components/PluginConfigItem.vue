@@ -3,10 +3,8 @@ import { ref, watch } from 'vue'
 
 import { deepClone, message } from '@/utils'
 
-import type { Plugin } from '@/types/app'
-
 interface Props {
-  plugin: Plugin
+  plugin: App.Plugin
   modelValue?: Recordable
 }
 
@@ -91,7 +89,7 @@ defineExpose({ reset: handleResetAll })
       </template>
       <div class="mb-8 text-12">{{ conf.description }}</div>
       <Component
-        :is="conf.component"
+        :is="(conf.component as any) === 'CodeViewer' ? 'CodeEditor' : conf.component"
         :model-value="model[conf.key] ?? conf.value"
         :options="getOptions(conf.options)"
         :autofocus="false"

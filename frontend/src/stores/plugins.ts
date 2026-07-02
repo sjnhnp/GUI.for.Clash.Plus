@@ -19,9 +19,7 @@ import {
   base64Encode,
 } from '@/utils'
 
-import type { Plugin, Subscription, TrayContent, MenuItem } from '@/types/app'
-
-const PreinstalledPlugins: Plugin[] = [
+const PreinstalledPlugins: App.Plugin[] = [
   {
     id: 'plugin-sync-gists-enhanced',
     name: '配置同步 - Gists (增强版)',
@@ -72,7 +70,7 @@ const PreinstalledPlugins: Plugin[] = [
 ]
 
 type PluginRuntimeCache = {
-  plugin: Plugin
+  plugin: App.Plugin
   code?: string
   module?: {
     url: string
@@ -80,7 +78,7 @@ type PluginRuntimeCache = {
     modulePromise: Promise<
       {
         default?: MaybePromise<
-          (Plugin: Plugin) => Partial<Record<PluginTriggerEvent, (...args: any[]) => any>>
+          (Plugin: App.Plugin) => Partial<Record<PluginTriggerEvent, (...args: any[]) => any>>
         >
       } & {
         [k in PluginTriggerEvent]: MaybePromise<(...args: any[]) => any>
@@ -153,8 +151,8 @@ const PluginsTriggerMap: Partial<
 export const usePluginsStore = defineStore('plugins', () => {
   const appSettingsStore = useAppSettingsStore()
 
-  const plugins = ref<Plugin[]>([])
-  const pluginHub = ref<Plugin[]>([])
+  const plugins = ref<App.Plugin[]>([])
+  const pluginHub = ref<App.Plugin[]>([])
 
   const setupPlugins = async () => {
     const data = await ignoredError(ReadFile, PluginsFilePath)
@@ -239,7 +237,7 @@ export const usePluginsStore = defineStore('plugins', () => {
     }
   }
 
-  const upsertPluginCache = (plugin: Plugin, code?: string) => {
+  const upsertPluginCache = (plugin: App.Plugin, code?: string) => {
     const oldCache = PluginsCache[plugin.id]
     PluginsCache[plugin.id] =
       code === undefined
@@ -248,7 +246,7 @@ export const usePluginsStore = defineStore('plugins', () => {
     return PluginsCache[plugin.id]!
   }
 
-  const shouldResetPluginModule = (oldPlugin: Plugin, newPlugin: Plugin) => {
+  const shouldResetPluginModule = (oldPlugin: App.Plugin, newPlugin: App.Plugin) => {
     return (
       oldPlugin.path !== newPlugin.path ||
       oldPlugin.disabled !== newPlugin.disabled ||
@@ -258,7 +256,7 @@ export const usePluginsStore = defineStore('plugins', () => {
     )
   }
 
-  const syncPluginObservers = (plugin: Plugin, enabled = true) => {
+  const syncPluginObservers = (plugin: App.Plugin, enabled = true) => {
     const triggers = Object.keys(PluginsTriggerMap) as PluginTrigger[]
     const activePluginMap = new Map(
       plugins.value.flatMap((item) =>
@@ -278,7 +276,7 @@ export const usePluginsStore = defineStore('plugins', () => {
   }
 
   const createPluginSourceMapComment = (
-    plugin: Plugin,
+    plugin: App.Plugin,
     originalCode: string,
     prependedLineCount = 0,
     appendedLineCount = 0,
@@ -326,7 +324,7 @@ export const usePluginsStore = defineStore('plugins', () => {
     delete PluginsCache[id]
   }
 
-  const ensurePluginRuntimeCache = (plugin: Plugin) => {
+  const ensurePluginRuntimeCache = (plugin: App.Plugin) => {
     if (!PluginsCache[plugin.id]) {
       upsertPluginCache(plugin)
     }
@@ -453,7 +451,7 @@ export const usePluginsStore = defineStore('plugins', () => {
 
   const getPluginMetadata = (id: string) => {
     const lastConfiguration: Recordable = { time: 0, data: undefined }
-    const buildConfiguration = (plugin: Plugin) => {
+    const buildConfiguration = (plugin: App.Plugin) => {
       const now = performance.now()
       if (lastConfiguration.data && now - lastConfiguration.time < 1000) {
         return lastConfiguration.data
@@ -476,7 +474,7 @@ export const usePluginsStore = defineStore('plugins', () => {
       return configuration
     }
 
-    const lastPlugin: { time: number; data: Plugin | undefined } = { time: 0, data: undefined }
+    const lastPlugin: { time: number; data: App.Plugin | undefined } = { time: 0, data: undefined }
     const getPlugin = () => {
       const now = performance.now()
       if (lastPlugin.data && now - lastPlugin.time < 1000) {
@@ -491,7 +489,7 @@ export const usePluginsStore = defineStore('plugins', () => {
       return plugin
     }
 
-    const proxy = new Proxy({} as Plugin & Recordable, {
+    const proxy = new Proxy({} as App.Plugin & Recordable, {
       get(_, p) {
         const plugin = getPlugin()
         if (typeof p === 'string' && p.startsWith('__v_')) {
@@ -545,7 +543,7 @@ export const usePluginsStore = defineStore('plugins', () => {
     return !cache || !cache.plugin || cache.plugin.disabled
   }
 
-  const reloadPlugin = async (plugin: Plugin, code = '', reloadTrigger = false) => {
+  const reloadPlugin = async (plugin: App.Plugin, code = '', reloadTrigger = false) => {
     const { path } = plugin
     if (!code) {
       code = await ReadFile(path)
@@ -563,7 +561,7 @@ export const usePluginsStore = defineStore('plugins', () => {
     return WriteFile(PluginsFilePath, stringifyNoFolding(p))
   }
 
-  const addPlugin = async (plugin: Plugin) => {
+  const addPlugin = async (plugin: App.Plugin) => {
     plugins.value.push(plugin)
     upsertPluginCache(plugin)
     syncPluginObservers(plugin, !plugin.disabled)
@@ -612,7 +610,7 @@ export const usePluginsStore = defineStore('plugins', () => {
     await savePlugins()
   }
 
-  const editPlugin = async (id: string, newPlugin: Plugin) => {
+  const editPlugin = async (id: string, newPlugin: App.Plugin) => {
     const idx = plugins.value.findIndex((v) => v.id === id)
     if (idx === -1) return
     const plugin = plugins.value[idx]!
@@ -655,7 +653,7 @@ export const usePluginsStore = defineStore('plugins', () => {
     await savePlugins()
   }
 
-  const updatePluginState = async (id: string, newPlugin: Plugin) => {
+  const updatePluginState = async (id: string, newPlugin: App.Plugin) => {
     const idx = plugins.value.findIndex((v) => v.id === id)
     if (idx === -1) return
 
@@ -667,7 +665,7 @@ export const usePluginsStore = defineStore('plugins', () => {
     await savePlugins()
   }
 
-  const _doUpdatePlugin = async (plugin: Plugin) => {
+  const _doUpdatePlugin = async (plugin: App.Plugin) => {
     let nextPlugin = plugin
     const isFromPluginHub = plugin.id.startsWith('plugin-')
     if (isFromPluginHub) {
@@ -744,7 +742,7 @@ export const usePluginsStore = defineStore('plugins', () => {
   const updatePlugins = async () => {
     let needSave = false
 
-    const update = async (plugin: Plugin) => {
+    const update = async (plugin: App.Plugin) => {
       const result = { ok: true, id: plugin.id, name: plugin.name, result: '' }
       try {
         plugin.updating = true
@@ -769,15 +767,15 @@ export const usePluginsStore = defineStore('plugins', () => {
 
   const pluginHubLoading = ref(false)
   const findPluginInHubById = (id: string) => pluginHub.value.find((v) => v.id === id)
-  const isDeprecated = (plugin: Plugin) => {
+  const isDeprecated = (plugin: App.Plugin) => {
     if (!plugin.id.startsWith('plugin-')) return false
     if (PreinstalledPlugins.some((p) => p.id === plugin.id)) return false
     return !findPluginInHubById(plugin.id)
   }
-  const isDevVersion = (plugin: Plugin) => {
+  const isDevVersion = (plugin: App.Plugin) => {
     return plugin.version.startsWith('v0')
   }
-  const hasNewPluginVersion = (plugin: Plugin) => {
+  const hasNewPluginVersion = (plugin: App.Plugin) => {
     const p = findPluginInHubById(plugin.id)
     if (!p) return false
     return p.version !== plugin.version
@@ -797,14 +795,14 @@ export const usePluginsStore = defineStore('plugins', () => {
     pluginHub.value = results.reduce((acc, result) => {
       if (result.status === 'fulfilled') {
         try {
-          const plugins = JSON.parse(result.value.body) as Plugin[]
+          const plugins = JSON.parse(result.value.body) as App.Plugin[]
           acc.push(...plugins)
         } catch (error) {
           console.error('Failed to parse plugin list from source. Reason: ', error)
         }
       }
       return acc
-    }, [] as Plugin[])
+    }, [] as App.Plugin[])
 
     await WriteFile(PluginHubFilePath, JSON.stringify(pluginHub.value))
     pluginHubLoading.value = false
@@ -814,7 +812,7 @@ export const usePluginsStore = defineStore('plugins', () => {
 
   const getPluginCodefromCache = (id: string) => PluginsCache[id]?.code
 
-  const onSubscribeTrigger = async (proxies: Recordable[], subscription: Subscription) => {
+  const onSubscribeTrigger = async (proxies: Recordable[], subscription: App.Subscription) => {
     const { fnName, observers } = PluginsTriggerMap[PluginTrigger.OnSubscribe]!
     if (observers.length === 0) return proxies
 
@@ -862,7 +860,7 @@ export const usePluginsStore = defineStore('plugins', () => {
     }
   }
 
-  const onGenerateTrigger = async (config: Recordable, profile: IProfile) => {
+  const onGenerateTrigger = async (config: Recordable, profile: App.Profile) => {
     const { fnName, observers } = PluginsTriggerMap[PluginTrigger.OnGenerate]!
     if (observers.length === 0) return config
 
@@ -881,7 +879,7 @@ export const usePluginsStore = defineStore('plugins', () => {
     return config
   }
 
-  const onBeforeCoreStartTrigger = async (params: Recordable, profile: IProfile) => {
+  const onBeforeCoreStartTrigger = async (params: Recordable, profile: App.Profile) => {
     const { fnName, observers } = PluginsTriggerMap[PluginTrigger.OnBeforeCoreStart]!
     if (observers.length === 0) return params
 
@@ -918,7 +916,7 @@ export const usePluginsStore = defineStore('plugins', () => {
     return exitCode
   }
 
-  const onTrayUpdateTrigger = async (tray: TrayContent, menus: MenuItem[]) => {
+  const onTrayUpdateTrigger = async (tray: App.TrayContent, menus: App.MenuItem[]) => {
     const { fnName, observers } = PluginsTriggerMap[PluginTrigger.OnTrayUpdate]!
     if (observers.length === 0) return [tray, menus] as const
 

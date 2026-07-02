@@ -15,30 +15,9 @@ import {
   eventBus,
 } from '@/utils'
 
-export interface RuleSet {
-  id: string
-  name: string
-  updateTime: number
-  disabled: boolean
-  type: 'Http' | 'File' | 'Manual'
-  behavior: RulesetBehavior
-  format: RulesetFormat
-  path: string
-  url: string
-  count: number
-  // Not Config
-  updating?: boolean
-}
-
-export interface RulesetHub {
-  geosite: string
-  geoip: string
-  list: { name: string; type: 'geosite' | 'geoip'; description: string; count: number }[]
-}
-
 export const useRulesetsStore = defineStore('rulesets', () => {
-  const rulesets = ref<RuleSet[]>([])
-  const rulesetHub = ref<RulesetHub>({ geosite: '', geoip: '', list: [] })
+  const rulesets = ref<App.RuleSet[]>([])
+  const rulesetHub = ref<App.RulesetHub>({ geosite: '', geoip: '', list: [] })
 
   const setupRulesets = async () => {
     const data = await ignoredError(ReadFile, RulesetsFilePath)
@@ -56,7 +35,7 @@ export const useRulesetsStore = defineStore('rulesets', () => {
     return WriteFile(RulesetsFilePath, stringifyNoFolding(r))
   }
 
-  const addRuleset = async (r: RuleSet) => {
+  const addRuleset = async (r: App.RuleSet) => {
     rulesets.value.push(r)
     try {
       await saveRulesets()
@@ -83,7 +62,7 @@ export const useRulesetsStore = defineStore('rulesets', () => {
     eventBus.emit('rulesetChange', { id })
   }
 
-  const editRuleset = async (id: string, r: RuleSet) => {
+  const editRuleset = async (id: string, r: App.RuleSet) => {
     const idx = rulesets.value.findIndex((v) => v.id === id)
     if (idx === -1) return
     const backup = rulesets.value.splice(idx, 1, r)[0]!
@@ -97,7 +76,7 @@ export const useRulesetsStore = defineStore('rulesets', () => {
     eventBus.emit('rulesetChange', { id })
   }
 
-  const _doUpdateRuleset = async (r: RuleSet) => {
+  const _doUpdateRuleset = async (r: App.RuleSet) => {
     if (r.format === RulesetFormat.Yaml) {
       let body = ''
       let isExist = true
@@ -163,7 +142,7 @@ export const useRulesetsStore = defineStore('rulesets', () => {
   const updateRulesets = async () => {
     let needSave = false
 
-    const update = async (r: RuleSet) => {
+    const update = async (r: App.RuleSet) => {
       const result = { ok: true, id: r.id, name: r.name, result: '' }
       try {
         r.updating = true

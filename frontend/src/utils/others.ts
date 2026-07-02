@@ -51,38 +51,42 @@ export const debounce = (fn: (...args: any) => any, wait: number) => {
   return _debuonce
 }
 
-export const throttle = <T extends (...args: any[]) => any>(fn: T, wait: number) => {
-  let lastTime = 0
-  let timer: number | null = null
+export function throttle<T extends (...args: any[]) => void>(
+  fn: T,
+  delay: number,
+): (...args: Parameters<T>) => void {
+  let last = 0
+  let timer: null | number = null
+  let trailingArgs: Parameters<T> | null = null
 
-  const _throttle = function (...args: Parameters<T>) {
+  const invoke = (args: Parameters<T>) => {
+    last = Date.now()
+    fn(...args)
+  }
+
+  return (...args: Parameters<T>) => {
     const now = Date.now()
-    const remaining = wait - (now - lastTime)
+    const remaining = delay - (now - last)
 
     if (remaining <= 0) {
-      if (timer) {
-        clearTimeout(timer)
+      timer && clearTimeout(timer)
+      timer = null
+      trailingArgs = null
+      invoke(args)
+      return
+    }
+
+    trailingArgs = args
+    if (!timer) {
+      timer = window.setTimeout(() => {
         timer = null
-      }
-      lastTime = now
-      fn(...args)
-    } else if (!timer) {
-      timer = setTimeout(() => {
-        lastTime = Date.now()
-        timer = null
-        fn(...args)
+        if (trailingArgs) {
+          invoke(trailingArgs)
+          trailingArgs = null
+        }
       }, remaining)
     }
   }
-
-  _throttle.cancel = function () {
-    if (timer) {
-      clearTimeout(timer)
-      timer = null
-    }
-  }
-
-  return _throttle
 }
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -261,7 +265,7 @@ export const transformRequestUrl = (url: string) => {
   return url
 }
 
-export const getAutoStartConfiguration = (os: OS, appPath: string, delay = 30) => {
+export const getAutoStartConfiguration = (os: App.OS | OS, appPath: string, delay = 30) => {
   if (os === OS.Windows) {
     const xml = /*xml*/ `<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">

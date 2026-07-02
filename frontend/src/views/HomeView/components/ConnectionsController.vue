@@ -7,12 +7,19 @@ import { DraggableOptions } from '@/constant/app'
 import { DefaultConnections } from '@/constant/kernel'
 import { useBool } from '@/hooks'
 import { useAppSettingsStore, useKernelApiStore } from '@/stores'
-import { formatBytes, formatRelativeTime, addToRuleSet, message, picker, throttle, getDomainSuffixes } from '@/utils'
+import {
+  formatBytes,
+  formatRelativeTime,
+  addToRuleSet,
+  message,
+  picker,
+  throttle,
+  getDomainSuffixes,
+} from '@/utils'
 
 import { type PickerItem } from '@/components/Picker/index.vue'
 
 import type { Column } from '@/components/Table/index.vue'
-import type { Menu } from '@/types/app'
 import type { CoreApiConnectionsData } from '@/types/kernel'
 
 type TrafficCacheType = { up: number; down: number }
@@ -165,7 +172,7 @@ const columnTitleMap = computed(() => {
   return map
 })
 
-const menu: Menu[] = [
+const menu: App.Menu[] = [
   {
     label: 'common.details',
     handler: (record: Record<string, any>) => {
@@ -387,7 +394,7 @@ onUnmounted(() => {
     max-width="80"
     mask-closable
   >
-    <CodeViewer v-model="details" />
+    <CodeEditor v-model="details" />
   </Modal>
 
   <Modal

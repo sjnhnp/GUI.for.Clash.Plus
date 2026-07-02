@@ -10,22 +10,22 @@ import {
   BuiltInOutbound,
 } from '@/constant/kernel'
 import { RulesetBehavior, RulesetFormat, RuleType } from '@/enums/kernel'
-import { useRulesetsStore, type RuleSet } from '@/stores'
+import { useRulesetsStore } from '@/stores'
 import { deepClone, sampleID, generateRule, message } from '@/utils'
 
 interface Props {
-  proxyGroups: IProfile['proxyGroupsConfig']
-  profile: IProfile
+  proxyGroups: App.Profile['proxyGroupsConfig']
+  profile: App.Profile
 }
 
 const props = defineProps<Props>()
 
-const rules = defineModel<IProfile['rulesConfig']>({ default: [] })
+const rules = defineModel<App.Profile['rulesConfig']>({ default: () => [] })
 
 let updateRuleId = 0
 const showModal = ref(false)
 
-const fields = ref<IProfile['rulesConfig'][number]>({
+const fields = ref<App.Profile['rulesConfig'][number]>({
   id: sampleID(),
   type: RuleType.RuleSet,
   enable: true,
@@ -46,19 +46,23 @@ const proxyOptions = computed(() => [
 ])
 
 const supportNoResolve = computed(() =>
-  [
+  (
+    [
     RuleType.Geoip,
     RuleType.IpCidr,
     RuleType.IpCidr6,
     RuleType.SCRIPT,
     RuleType.RuleSet,
     RuleType.IpAsn,
-  ].includes(fields.value.type),
+    ] as App.RuleType[]
+  ).includes(fields.value.type),
 )
 
 const supportPayload = computed(
   () =>
-    ![RuleType.Match, RuleType.RuleSet, RuleType.InsertionPoint].includes(fields.value.type) ||
+    !([RuleType.Match, RuleType.RuleSet, RuleType.InsertionPoint] as App.RuleType[]).includes(
+      fields.value.type,
+    ) ||
     (fields.value.type === RuleType.RuleSet && fields.value['ruleset-type'] === 'http'),
 )
 
@@ -130,22 +134,22 @@ const handleAddEnd = () => {
   }
 }
 
-const handleUseRuleset = (ruleset: RuleSet) => {
+const handleUseRuleset = (ruleset: App.RuleSet) => {
   fields.value.payload = ruleset.id
   fields.value['no-resolve'] = ruleset.behavior === RulesetBehavior.Ipcidr
 }
 
-const hasLost = (r: IProfile['rulesConfig'][0]) => {
+const hasLost = (r: App.Profile['rulesConfig'][0]) => {
   if (BuiltInOutbound.includes(r.proxy)) return false
   // For SUB-RULE type Logic rules, the proxy field contains the sub-rule name, not a proxy group
   if (r.type === RuleType.Logic && /^SUB-RULE,/i.test(r.payload)) return false
   return !props.profile.proxyGroupsConfig.find((v) => v.id === r.proxy)
 }
 
-const notSupport = (r: IProfile['rulesConfig'][0]) => {
+const notSupport = (r: App.Profile['rulesConfig'][0]) => {
   return (
     !props.profile.advancedConfig['geodata-mode'] &&
-    [RuleType.Geoip, RuleType.Geosite].includes(r.type)
+    ([RuleType.Geoip, RuleType.Geosite] as App.RuleType[]).includes(r.type)
   )
 }
 
@@ -208,7 +212,7 @@ const showLost = () => message.warn('kernel.rules.notFound')
     </div>
     <div v-show="supportPayload" class="form-item">
       {{ t('kernel.rules.payload') }}
-      <CodeViewer
+      <CodeEditor
         v-if="fields.type === 'LOGIC'"
         v-model="fields.payload"
         editable
@@ -289,7 +293,7 @@ const showLost = () => message.warn('kernel.rules.notFound')
         {{ t('ruleset.behavior.name') }}
         <Select v-model="fields['ruleset-behavior']" :options="RulesetBehaviorOptions" />
       </div>
-      <CodeViewer v-model="fields['payload']" editable lang="yaml" />
+      <CodeEditor v-model="fields['payload']" editable lang="yaml" />
     </template>
   </Modal>
 </template>

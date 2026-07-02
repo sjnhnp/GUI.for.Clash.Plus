@@ -7,8 +7,8 @@ import { useSubscribesStore, useRulesetsStore, usePluginsStore } from '@/stores'
 import { deepClone, APP_TITLE, deepAssign, stringifyNoFolding } from '@/utils'
 
 export const generateRule = (
-  rule: IProfile['rulesConfig'][0],
-  proxyGruoups?: IProfile['proxyGroupsConfig'],
+  rule: App.Profile['rulesConfig'][0],
+  proxyGruoups?: App.Profile['proxyGroupsConfig'],
 ) => {
   const {
     type,
@@ -58,14 +58,16 @@ export const generateRule = (
     ruleStr += ',' + proxy  // proxy contains the sub-rule name, not a proxy group ID
   }
 
-  const supportNoResolve = [
+  const supportNoResolve = (
+    [
     RuleType.Geoip,
     RuleType.IpCidr,
     RuleType.IpCidr6,
     RuleType.SCRIPT,
     RuleType.RuleSet,
     RuleType.IpAsn,
-  ].includes(type)
+    ] as App.RuleType[]
+  ).includes(type)
 
   if (noResolve && supportNoResolve) {
     ruleStr += ',no-resolve'
@@ -75,7 +77,7 @@ export const generateRule = (
 
 type ProxiesType = { type: string; name: string }
 
-export const generateProxies = async (groups: IProfile['proxyGroupsConfig']) => {
+export const generateProxies = async (groups: App.Profile['proxyGroupsConfig']) => {
   const subscribesStore = useSubscribesStore()
 
   const subIDsMap = new Set(
@@ -90,7 +92,7 @@ export const generateProxies = async (groups: IProfile['proxyGroupsConfig']) => 
 
   const proxyMap: Record<string, ProxiesType[]> = {}
 
-  for (const subID of Array.from(subIDsMap)) {
+  for (const subID of subIDsMap) {
     const sub = subscribesStore.getSubscribeById(subID)
     if (sub) {
       try {
@@ -123,8 +125,8 @@ export const generateProxies = async (groups: IProfile['proxyGroupsConfig']) => 
 }
 
 export const generateProxyGroup = (
-  proxyGruoup: IProfile['proxyGroupsConfig'][0],
-  groups: IProfile['proxyGroupsConfig'],
+  proxyGruoup: App.Profile['proxyGroupsConfig'][0],
+  groups: App.Profile['proxyGroupsConfig'],
 ) => {
   const {
     type,
@@ -194,7 +196,7 @@ export const generateProxyGroup = (
   return group
 }
 
-export const generateProxyProviders = async (groups: IProfile['proxyGroupsConfig']) => {
+export const generateProxyProviders = async (groups: App.Profile['proxyGroupsConfig']) => {
   const providers: Record<string, any> = {}
   const subs = new Set<string>()
   groups.forEach((group) => {
@@ -215,11 +217,11 @@ export const generateProxyProviders = async (groups: IProfile['proxyGroupsConfig
 }
 
 const generateRuleProviders = async (
-  dns: IProfile['dnsConfig'],
-  rules: IProfile['rulesConfig'],
-  proxyGruoups: IProfile['proxyGroupsConfig'],
+  dns: App.Profile['dnsConfig'],
+  rules: App.Profile['rulesConfig'],
+  proxyGruoups: App.Profile['proxyGroupsConfig'],
   mixinRuleProviders: Record<string, any> = {},
-  dnsRuleProviders: IProfile['dnsRuleProviders'] = {},
+  dnsRuleProviders: App.Profile['dnsRuleProviders'] = {},
 ) => {
   const rulesetsStore = useRulesetsStore()
   const providers: Record<string, any> = {}
@@ -262,27 +264,15 @@ const generateRuleProviders = async (
 
     const ruleset = rulesetsStore.getRulesetById(name) || rulesetsStore.getRulesetByName(name)
     if (ruleset) {
-      if (ruleset.type === 'Http') {
-        providers[ruleset.name] = {
-          type: 'http',
-          url: ruleset.url,
-          behavior: ruleset.behavior,
-          path: ruleset.path.replace('data/', '../'),
-          format: ruleset.format,
-          interval: 86400,
-        }
-      } else {
-        providers[ruleset.name] = {
-          type: 'file',
-          behavior: ruleset.behavior,
-          path: ruleset.path.replace('data/', '../'),
-          format: ruleset.format,
-        }
+      providers[ruleset.name] = {
+        type: 'file',
+        behavior: ruleset.behavior,
+        path: ruleset.path.replace('data/', '../'),
+        format: ruleset.format,
       }
     }
   }
 
-  // Process enabled RULE-SET rules to generate rule-providers
   rules
     .filter((rule) => rule.type === 'RULE-SET' && rule.enable)
     .forEach((rule) => {
@@ -296,10 +286,7 @@ const generateRuleProviders = async (
           behavior: rule['ruleset-behavior'],
           format: rule['ruleset-format'],
           proxy: group?.name || 'DIRECT',
-          interval:
-            typeof rule['ruleset-interval'] === 'number'
-              ? rule['ruleset-interval']
-              : parseInt(rule['ruleset-interval']) || 86400,
+          interval: rule['ruleset-interval'],
         }
       } else if (rule['ruleset-type'] === 'inline') {
         providers[rule['ruleset-name']] = {
@@ -310,58 +297,17 @@ const generateRuleProviders = async (
       }
     })
 
-  // Extract rule-set references from GUI's DNS config
-  // Support both old format (rule-set:xxx) and new rule mode format (RULE-SET,xxx,fake-ip/real-ip)
-  const l1 = (dns['fake-ip-filter'] || []).flatMap((v: string) => {
-    // Old format: rule-set:name1,name2
-    if (v.startsWith('rule-set:')) {
-      return v.substring(9).split(',').map((x) => x.trim())
-    }
-    // New rule mode format: RULE-SET,name,fake-ip or RULE-SET,name,real-ip
-    const ruleSetMatch = v.match(/^RULE-SET,([^,]+),(?:fake-ip|real-ip)$/i)
-    if (ruleSetMatch && ruleSetMatch[1]) {
-      return [ruleSetMatch[1].trim()]
-    }
-    return []
-  })
-  const l2 = Object.keys(dns['nameserver-policy'] || {}).flatMap((key) =>
-    key.startsWith('rule-set:')
-      ? key
-        .substring(9)
-        .split(',')
-        .map((v) => v.trim())
-      : [],
+  const l1 = dns['fake-ip-filter'].flatMap((v) => (v.startsWith('rule-set:') ? v.substring(9) : []))
+  const l2 = Object.keys(dns['nameserver-policy']).flatMap((key) =>
+    key.startsWith('rule-set:') ? key.substring(9).split(',') : [],
   )
 
-  // Also extract rule-set references from mixin's DNS config
-  const mixinDns = (mixinRuleProviders as any).__mixinDns || {}
-  const l3 = (mixinDns['fake-ip-filter'] || []).flatMap((v: string) => {
-    // Old format: rule-set:name1,name2
-    if (v.startsWith('rule-set:')) {
-      return v.substring(9).split(',').map((x) => x.trim())
-    }
-    // New rule mode format: RULE-SET,name,fake-ip or RULE-SET,name,real-ip
-    const ruleSetMatch = v.match(/^RULE-SET,([^,]+),(?:fake-ip|real-ip)$/i)
-    if (ruleSetMatch && ruleSetMatch[1]) {
-      return [ruleSetMatch[1].trim()]
-    }
-    return []
-  })
-  const l4 = Object.keys(mixinDns['nameserver-policy'] || {}).flatMap((key) =>
-    key.startsWith('rule-set:')
-      ? key
-        .substring(9)
-        .split(',')
-        .map((v) => v.trim())
-      : [],
-  )
-
-  l1.concat(l2, l3, l4).forEach((name) => appendLocalProvider(name))
+  l1.concat(l2).forEach((name) => appendLocalProvider(name))
 
   return providers
 }
 
-export const generateConfig = async (originalProfile: IProfile) => {
+export const generateConfig = async (originalProfile: App.Profile) => {
   const profile = deepClone(originalProfile)
 
   const config: Record<string, any> = {
@@ -379,19 +325,6 @@ export const generateConfig = async (originalProfile: IProfile) => {
     dns: profile.dnsConfig,
     sniffer: profile.sniffer,
     hosts: {},
-  }
-
-  // Add sniffer config if present and enabled
-  if (profile.snifferConfig) {
-    config.sniffer = profile.snifferConfig
-  }
-
-  // Force cleanup for MMDB mode to prevent kernel from looking for GeoIP.dat
-  if (!config['geodata-mode']) {
-    // When using MMDB mode, we should not provide a DAT download URL to avoid confusion
-    if (config['geox-url']) {
-      config['geox-url'].geoip = ''
-    }
   }
 
   // step 1
@@ -427,25 +360,9 @@ export const generateConfig = async (originalProfile: IProfile) => {
   }
 
   Object.entries(config.dns['nameserver-policy']).forEach(([key, value]: any) => {
-    if (Array.isArray(value)) {
-      config.dns['nameserver-policy'][key] = value.length === 1 ? value[0] : value
-    } else if (typeof value === 'string') {
-      const _value = value.split(',')
-      config.dns['nameserver-policy'][key] = _value.length === 1 ? _value[0] : _value
-    }
+    const _value = value.split(',')
+    config.dns['nameserver-policy'][key] = _value.length === 1 ? _value[0] : _value
   })
-
-  // Process fake-ip-filter: expand old format rule-set references, keep rule mode syntax as-is
-  if (config.dns['fake-ip-filter']) {
-    config.dns['fake-ip-filter'] = config.dns['fake-ip-filter'].flatMap((v: string) => {
-      // Old format: rule-set:name1,name2 -> [rule-set:name1, rule-set:name2]
-      if (v.startsWith('rule-set:')) {
-        return v.substring(9).split(',').map((x) => `rule-set:${x.trim()}`)
-      }
-      // Rule mode syntax (DOMAIN,xxx,fake-ip etc.) - keep as-is
-      return [v]
-    })
-  }
 
   config['proxy-providers'] = await generateProxyProviders(profile.proxyGroupsConfig)
 
@@ -507,7 +424,8 @@ export const generateConfig = async (originalProfile: IProfile) => {
           return false
         }
         return (
-          profile.advancedConfig['geodata-mode'] || ![RuleType.Geosite, RuleType.Geoip].includes(type)
+          profile.advancedConfig['geodata-mode'] ||
+          !([RuleType.Geosite, RuleType.Geoip] as App.RuleType[]).includes(type)
         )
       })
       .map((rule) => generateRule(rule, profile.proxyGroupsConfig)),
@@ -523,7 +441,6 @@ export const generateConfig = async (originalProfile: IProfile) => {
 
   // step 3
   const { priority, config: mixin } = originalProfile.mixinConfig
-
   if (priority === 'mixin') {
     deepAssign(_config, parse(mixin))
   } else if (priority === 'gui') {
@@ -550,7 +467,7 @@ export const generateConfig = async (originalProfile: IProfile) => {
 }
 
 export const generateConfigFile = async (
-  profile: IProfile,
+  profile: App.Profile,
   beforeWrite: (config: any) => Promise<any>,
 ) => {
   const header = `# DO NOT EDIT - Generated by ${APP_TITLE}\n`
