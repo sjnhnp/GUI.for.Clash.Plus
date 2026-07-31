@@ -24,7 +24,9 @@ export enum Api {
   Configs = '/configs',
   Memory = '/memory',
   Proxies = '/proxies',
+  Providers = '/providers/proxies',
   ProxyDelay = '/proxies/{0}/delay',
+  ProviderProxyDelay = '/providers/proxies/{0}/{1}/healthcheck',
   Connections = '/connections',
   Traffic = '/traffic',
   Logs = '/logs',
@@ -125,17 +127,19 @@ export const probeApiAvailability = () => request.get('/version')
 export const getConfigs = () => request.get<CoreApiConfig>(Api.Configs)
 export const setConfigs = (body = {}) => request.patch<null>(Api.Configs, body)
 export const getProxies = () => request.get<CoreApiProxies>(Api.Proxies)
+export const getProviders = () => request.get<any>(Api.Providers)
 export const getConnections = () => request.get<CoreApiConnections>(Api.Connections)
 export const deleteConnection = (id: string) => request.delete<null>(Api.Connections + '/' + id)
 export const deleteGroupFixed = (group: string) => request.delete(Api.Proxies + '/' + group)
 export const useProxy = (group: string, proxy: string) => {
   return request.put<null>(Api.Proxies + '/' + group, { name: proxy })
 }
-export const getProxyDelay = (proxy: string, url: string, timeout: number) => {
-  return request.get<Record<string, number>>(Api.ProxyDelay.replace('{0}', proxy), {
-    url,
-    timeout,
-  })
+export const getProxyDelay = (provider: string, proxy: string, url: string, timeout: number) => {
+  const query = { url, timeout }
+  const path = provider
+    ? Api.ProviderProxyDelay.replace('{0}', provider).replace('{1}', proxy)
+    : Api.ProxyDelay.replace('{0}', proxy)
+  return request.get<Record<string, number>>(path, query)
 }
 export const updateGEO = () => request.post<{ message: string } | null>(Api.GEO)
 

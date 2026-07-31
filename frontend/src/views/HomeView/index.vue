@@ -5,9 +5,7 @@ import { useI18n } from 'vue-i18n'
 import logo from '@/assets/logo'
 import { ControllerCloseMode } from '@/enums/app'
 import { useAppSettingsStore, useProfilesStore, useKernelApiStore } from '@/stores'
-import { APP_TITLE, message, debounce } from '@/utils'
-
-import { useModal } from '@/components/Modal'
+import { APP_TITLE, message, debounce, modal } from '@/utils'
 
 import GroupsController from './components/GroupsController.vue'
 import KernelLogs from './components/KernelLogs.vue'
@@ -18,7 +16,6 @@ const showController = ref(false)
 const controllerRef = useTemplateRef('controllerRef')
 
 const { t } = useI18n()
-const [Modal, modalApi] = useModal({})
 
 const appSettingsStore = useAppSettingsStore()
 const profilesStore = useProfilesStore()
@@ -34,12 +31,11 @@ const handleStartKernel = async () => {
 }
 
 const handleShowQuickStart = () => {
-  modalApi.setProps({ title: 'subscribes.enterLink' })
-  modalApi.setContent(QuickStart).open()
+  modal({ title: 'subscribes.enterLink' }).setContent(QuickStart).open()
 }
 
 const handleShowKernelLogs = () => {
-  modalApi.setProps({
+  const m = modal({
     title: 'home.overview.viewlog',
     width: '90',
     height: '90',
@@ -47,7 +43,7 @@ const handleShowKernelLogs = () => {
     cancelText: 'common.close',
     maskClosable: true,
   })
-  modalApi.setContent(KernelLogs).open()
+  m.setContent(KernelLogs).open()
 }
 
 let scrollEventCount = 0
@@ -84,7 +80,7 @@ watch(showController, (v) => {
 </script>
 
 <template>
-  <div class="relative overflow-hidden h-full" @wheel.passive="onMouseWheel">
+  <div class="home-view relative overflow-hidden h-full" @wheel.passive="onMouseWheel">
     <div
       v-if="(!kernelApiStore.running && !kernelApiStore.stopping) || kernelApiStore.starting"
       class="w-full h-[90%] flex flex-col items-center justify-center"
@@ -153,7 +149,7 @@ watch(showController, (v) => {
     <template v-else-if="!kernelApiStore.coreStateLoading">
       <div :class="{ 'blur-3xl': showController }">
         <OverView />
-        <Divider>
+        <Divider class="controller-trigger">
           <Button type="link" size="small" @click="showController = true">
             {{ t('home.controller.name') }}
           </Button>
@@ -163,13 +159,13 @@ watch(showController, (v) => {
       <div
         ref="controllerRef"
         :class="showController ? 'translate-y-0' : 'translate-y-full'"
-        class="absolute inset-0 pb-32 overflow-y-auto duration-400"
+        class="controller-panel absolute inset-0 pb-32 overflow-y-auto duration-400"
       >
         <GroupsController />
       </div>
       <Button
         v-show="showController"
-        class="fixed left-1/2 -translate-x-1/2 bottom-12 z-2"
+        class="controller-close fixed left-1/2 -translate-x-1/2 bottom-12 z-2"
         style="background-color: var(--card-bg)"
         type="text"
         size="small"
@@ -178,6 +174,4 @@ watch(showController, (v) => {
       />
     </template>
   </div>
-
-  <Modal />
 </template>

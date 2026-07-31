@@ -12,6 +12,7 @@ import {
   initWebsocket,
   destroyWebsocket,
   probeApiAvailability,
+  getProviders,
 } from '@/api/kernel'
 import { ProcessInfo, KillProcess, ExecBackground, ReadFile, RemoveFile } from '@/bridge'
 import { CoreLogFilePath, CorePidFilePath, CoreWorkingDirectory } from '@/constant/kernel'
@@ -98,7 +99,17 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
   }
 
   const refreshProviderProxies = async () => {
-    const { proxies: b } = await getProxies()
+    const [a, { proxies: b }] = await Promise.all([getProviders(), getProxies()])
+    for (const provider in a.providers) {
+      if (!b[provider]) {
+        for (const proxy of a.providers[provider].proxies) {
+          if (!b[proxy.name]) {
+            proxy.provider = provider
+            b[proxy.name] = proxy
+          }
+        }
+      }
+    }
     proxies.value = b
   }
 

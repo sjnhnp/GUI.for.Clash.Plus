@@ -25,8 +25,15 @@ const handleCancel = inject('cancel') as any
 watch(keywords, () => (currentPage.value = 1))
 
 const filteredList = computed(() => {
-  if (!keywords.value) return rulesetsStore.rulesetHub.list
-  return rulesetsStore.rulesetHub.list.filter((ruleset) => ruleset.name.includes(keywords.value))
+  const tokens = keywords.value.trim().split(/\s+/).filter(Boolean)
+  if (tokens.length === 0) return rulesetsStore.rulesetHub.list
+  const lowered = tokens.map((t) => t.toLocaleLowerCase())
+  return rulesetsStore.rulesetHub.list.filter((ruleset) => {
+    const fields = [ruleset.name, ruleset.type, ruleset.description].map((f) =>
+      f?.toLocaleLowerCase(),
+    )
+    return lowered.every((token) => fields.some((f) => f?.includes(token)))
+  })
 })
 
 const currentList = computed(() => {
@@ -194,11 +201,8 @@ defineExpose({ modalSlots })
 </script>
 
 <template>
-  <div class="h-full">
-    <div v-if="rulesetsStore.rulesetHubLoading" class="flex items-center justify-center h-full">
-      <Button type="text" loading />
-    </div>
-    <div v-else class="flex flex-col h-full">
+  <ModalContainer :empty="filteredList.length === 0">
+    <template #top>
       <div class="flex items-center gap-8">
         <Input
           v-model="keywords"
@@ -208,14 +212,19 @@ defineExpose({ modalSlots })
           size="small"
           class="flex-1"
         />
-        <Button icon="refresh" size="small" @click="handleUpdatePluginHub">
+        <Button
+          icon="refresh"
+          size="small"
+          :loading="rulesetsStore.rulesetHubLoading"
+          @click="handleUpdatePluginHub"
+        >
           {{ t('plugins.update') }}
         </Button>
       </div>
+    </template>
 
-      <Empty v-if="filteredList.length === 0" />
-
-      <div class="overflow-y-auto grid grid-cols-3 text-12 gap-8 mt-8 pb-16 pr-8">
+    <template #body>
+      <div class="grid grid-cols-3 text-12 gap-8">
         <Card
           v-for="ruleset in currentList"
           :key="ruleset.name + ruleset.type"
@@ -282,6 +291,6 @@ defineExpose({ modalSlots })
           </div>
         </Card>
       </div>
-    </div>
-  </div>
+    </template>
+  </ModalContainer>
 </template>
