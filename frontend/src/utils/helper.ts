@@ -244,7 +244,7 @@ export const DisableAutoStart = async () => {
 
 // Windows Task Scheduler Helper
 export const QuerySchTask = async (appName: string) => {
-  return await Exec('SchTasks', ['/Query', '/TN', appName], { Convert: true })
+  return await Exec('SchTasks', ['/Query', '/TN', appName])
 }
 
 export const CreateSchTask = async (appName: string, xmlPath: string) => {
