@@ -28,7 +28,7 @@ import {
   sleep,
 } from '@/utils'
 
-import { AboutView } from '@/components'
+import AboutView from '@/components/_common/AboutView.vue'
 
 import { useEnvStore } from './env'
 

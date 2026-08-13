@@ -229,7 +229,15 @@ jobs:
 
   Build-Linux:
     needs: Build-Frontend
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-26.04-arm
+    runs-on: ${{ matrix.runner }}
     env:
       APP_NAME: GFC.Plus
     steps:
@@ -282,22 +290,22 @@ jobs:
             fi
           fi
 
-      - name: Build & Pack Linux (amd64)
+      - name: Build & Pack Linux (${{ matrix.arch }})
         run: |
-          export GOOS=linux GOARCH=amd64
+          export GOOS=linux GOARCH=${{ matrix.arch }}
 
           LDFLAGS="-X 'guiforcores/bridge.Version=$VERSION'"
-          echo "==> Building Linux amd64 with version $VERSION..."
+          echo "==> Building Linux ${{ matrix.arch }} with version $VERSION..."
           ~/go/bin/wails build -m -s -trimpath -skipbindings -devtools -tags webkit2_41 -ldflags "$LDFLAGS" -o $APP_NAME
 
           cd build/bin
-          tar -czvf $APP_NAME-linux-amd64.tar.gz $APP_NAME
+          tar -czvf $APP_NAME-linux-${{ matrix.arch }}.tar.gz $APP_NAME
           rm -f $APP_NAME
           cd ../..
 
       - uses: actions/upload-artifact@v4
         with:
-          name: linux-builds
+          name: linux-build-${{ matrix.arch }}
           path: build/bin/*.tar.gz
 
   Release:

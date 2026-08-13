@@ -60,12 +60,12 @@ export const generateRule = (
 
   const supportNoResolve = (
     [
-    RuleType.Geoip,
-    RuleType.IpCidr,
-    RuleType.IpCidr6,
-    RuleType.SCRIPT,
-    RuleType.RuleSet,
-    RuleType.IpAsn,
+      RuleType.Geoip,
+      RuleType.IpCidr,
+      RuleType.IpCidr6,
+      RuleType.SCRIPT,
+      RuleType.RuleSet,
+      RuleType.IpAsn,
     ] as App.RuleType[]
   ).includes(type)
 
