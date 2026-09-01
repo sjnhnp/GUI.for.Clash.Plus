@@ -122,9 +122,16 @@ export const restoreProfile = (
             ? v
               .substring(9)
               .split(',')
-              .map((x) => `rule-set:${x}`)
+              .map((x) => `rule-set:${x.trim()}`)
             : [v],
         )
+      }
+      if (value['nameserver-policy']) {
+        Object.entries(value['nameserver-policy']).forEach(([k, v]: [string, any]) => {
+          if (Array.isArray(v)) {
+            value['nameserver-policy'][k] = v.map((item) => String(item).trim()).join(', ')
+          }
+        })
       }
       profile.dnsConfig = deepAssign(profile.dnsConfig, value)
     } else if (field === 'tun') {
@@ -266,7 +273,7 @@ export const restoreProfile = (
   const nameserverPolicy = profile.dnsConfig['nameserver-policy'] || {}
   const nameserverPolicyRulesets = Object.keys(nameserverPolicy).flatMap((key) =>
     key.startsWith('rule-set:')
-      ? key.substring(9).split(',').map(x => x.trim())
+      ? key.substring(9).split(',').map((x) => x.trim()).filter(Boolean)
       : []
   )
 

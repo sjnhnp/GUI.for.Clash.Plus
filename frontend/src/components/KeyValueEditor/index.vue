@@ -13,7 +13,14 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits(['change', 'update:modelValue'])
 
-const entries = ref(Object.entries(props.modelValue))
+const formatEntries = (val: Recordable = {}): [string, string][] => {
+  return Object.entries(val || {}).map(([k, v]) => [
+    k,
+    Array.isArray(v) ? v.map((item) => String(item).trim()).join(', ') : String(v ?? ''),
+  ])
+}
+
+const entries = ref(formatEntries(props.modelValue))
 
 const handleDel = (i: number) => {
   entries.value.splice(i, 1)
@@ -31,7 +38,7 @@ watch(
   () => props.modelValue,
   (val) => {
     if (!internalUpdate) {
-      entries.value = Object.entries(val)
+      entries.value = formatEntries(val)
     }
     internalUpdate = false
   },

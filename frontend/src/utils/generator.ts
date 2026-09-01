@@ -297,9 +297,33 @@ const generateRuleProviders = async (
       }
     })
 
-  const l1 = dns['fake-ip-filter'].flatMap((v) => (v.startsWith('rule-set:') ? v.substring(9) : []))
-  const l2 = Object.keys(dns['nameserver-policy']).flatMap((key) =>
-    key.startsWith('rule-set:') ? key.substring(9).split(',') : [],
+  const mixinDns = (mixinRuleProviders as any).__mixinDns || {}
+  const fakeIpSources = [
+    ...(dns['fake-ip-filter'] || []),
+    ...(mixinDns['fake-ip-filter'] || []),
+  ]
+  const l1 = fakeIpSources.flatMap((v) => {
+    if (typeof v !== 'string') return []
+    if (v.startsWith('rule-set:')) {
+      return v.substring(9).split(',').map((x) => x.trim()).filter(Boolean)
+    }
+    const ruleSetMatch = v.match(/^RULE-SET,([^,]+),(?:fake-ip|real-ip)$/i)
+    if (ruleSetMatch && ruleSetMatch[1]) {
+      return [ruleSetMatch[1].trim()]
+    }
+    return []
+  })
+
+  const policySources = [
+    dns['nameserver-policy'] || {},
+    mixinDns['nameserver-policy'] || {},
+  ]
+  const l2 = policySources.flatMap((policy) =>
+    Object.keys(policy).flatMap((key) =>
+      key.startsWith('rule-set:')
+        ? key.substring(9).split(',').map((x) => x.trim()).filter(Boolean)
+        : [],
+    ),
   )
 
   l1.concat(l2).forEach((name) => appendLocalProvider(name))
@@ -359,10 +383,27 @@ export const generateConfig = async (originalProfile: App.Profile) => {
     delete config.dns['proxy-server-nameserver']
   }
 
-  Object.entries(config.dns['nameserver-policy']).forEach(([key, value]: any) => {
-    const _value = value.split(',')
-    config.dns['nameserver-policy'][key] = _value.length === 1 ? _value[0] : _value
-  })
+  if (config.dns && config.dns['nameserver-policy']) {
+    Object.entries(config.dns['nameserver-policy']).forEach(([key, value]: any) => {
+      let _value: string[]
+      if (Array.isArray(value)) {
+        _value = value
+          .flatMap((v) => (typeof v === 'string' ? v.split(',') : String(v)))
+          .map((v) => v.trim())
+          .filter(Boolean)
+      } else if (typeof value === 'string') {
+        _value = value
+          .split(',')
+          .map((v) => v.trim())
+          .filter(Boolean)
+      } else if (value !== null && value !== undefined) {
+        _value = [String(value).trim()].filter(Boolean)
+      } else {
+        _value = []
+      }
+      config.dns['nameserver-policy'][key] = _value.length === 1 ? _value[0] : _value
+    })
+  }
 
   config['proxy-providers'] = await generateProxyProviders(profile.proxyGroupsConfig)
 

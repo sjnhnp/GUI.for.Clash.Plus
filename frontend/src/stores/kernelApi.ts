@@ -357,10 +357,17 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
 
   const collectRulesetIDs = () => {
     if (!profilesStore.currentProfile) return []
-    const l1 = Object.keys(profilesStore.currentProfile.dnsConfig['nameserver-policy']).flatMap(
-      (v) => (v.startsWith('rule-set:') ? v.slice('rule-set:'.length) : []),
+    const l1 = Object.keys(profilesStore.currentProfile.dnsConfig['nameserver-policy'] || {}).flatMap(
+      (v) =>
+        v.startsWith('rule-set:')
+          ? v
+              .slice('rule-set:'.length)
+              .split(',')
+              .map((x) => x.trim())
+              .filter(Boolean)
+          : [],
     )
-    const l2 = profilesStore.currentProfile.rulesConfig.flatMap((v) =>
+    const l2 = (profilesStore.currentProfile.rulesConfig || []).flatMap((v) =>
       v.type === RuleType.RuleSet ? v.payload : [],
     )
     return [...l1, ...l2]
