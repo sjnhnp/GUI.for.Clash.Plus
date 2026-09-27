@@ -113,6 +113,7 @@ export default {
       gvisor: 'gVisor',
       mixed: 'Mixed',
       lwip: 'LWIP',
+      mips: 'Mips',
     },
     dns: {
       enable: 'Enable',
@@ -672,6 +673,7 @@ export default {
     contentProtection: 'Content Protection',
     contentProtectionTips: 'Blocks screen capture (Restart Required)',
     rollingRelease: 'Enable Rolling Release',
+    debugModalSideBySide: 'Open modals side by side',
     debugOutline: 'Show component outlines',
     debugNoAnimation: 'Disable animations',
     debugNoRounded: 'Disable rounded corners',

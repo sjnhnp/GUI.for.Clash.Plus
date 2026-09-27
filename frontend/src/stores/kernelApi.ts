@@ -172,7 +172,7 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
       const config = await getConfigs().catch(() => null)
       if (config?.tun?.enable) break
       if (Date.now() - start >= 5_000) {
-        message.warn('TUN mode failed to start. Please check administrator permissions.')
+        message.warn('TUN mode startup timed out.')
         break
       }
       await sleep(500)
