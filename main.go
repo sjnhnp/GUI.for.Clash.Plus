@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	_ "image/jpeg"
 	_ "image/png"
 	"guiforcores/bridge"
@@ -24,10 +26,17 @@ var assets embed.FS
 //go:embed build/appicon.png
 var icon []byte
 
+//go:embed build/appicon.png
+var appIcon []byte
+
 func main() {
 	app := bridge.CreateApp(assets)
 
-	trayStart, trayEnd := bridge.CreateTray(app, icon)
+	trayIcon := icon
+	if bridge.Env.OS == "linux" {
+		trayIcon = appIcon
+	}
+	trayStart, trayEnd := bridge.CreateTray(app, trayIcon)
 
 	// Create application with options
 	err := wails.Run(&options.App{
@@ -36,11 +45,11 @@ func main() {
 		DisableResize:    false,
 		Menu:             app.AppMenu,
 		Title:            bridge.Env.AppName,
-		Frameless:        bridge.Env.OS != "darwin",
+		Frameless:        bridge.Env.OS != "darwin" && !bridge.Config.SystemTitleBar,
 		Width:            bridge.Config.Width,
 		Height:           bridge.Config.Height,
-		StartHidden:      bridge.Config.StartHidden,
-		WindowStartState: options.WindowStartState(bridge.Config.WindowStartState),
+		StartHidden:      bridge.Env.WindowStartState == options.Minimised,
+		WindowStartState: bridge.Env.WindowStartState,
 		BackgroundColour: &options.RGBA{R: 30, G: 30, B: 30, A: 255},
 		Windows: &windows.Options{
 			WebviewIsTransparent: true,
@@ -62,7 +71,7 @@ func main() {
 			},
 		},
 		Linux: &linux.Options{
-			Icon:                icon,
+			Icon:                appIcon,
 			WindowIsTranslucent: false,
 			ProgramName:         bridge.Env.AppName,
 			WebviewGpuPolicy:    linux.WebviewGpuPolicy(bridge.Config.WebviewGpuPolicy),
@@ -76,7 +85,8 @@ func main() {
 				if bridge.Config.MultipleInstance {
 					return time.Now().String()
 				}
-				return bridge.Env.AppName
+				sum := sha256.Sum256([]byte(bridge.Env.DataDir))
+				return bridge.Env.AppId + "-" + hex.EncodeToString(sum[:8])
 			}(),
 			OnSecondInstanceLaunch: func(data options.SecondInstanceData) {
 				runtime.Show(app.Ctx)

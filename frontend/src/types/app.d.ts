@@ -3,9 +3,7 @@ declare namespace App {
   type Theme = 'auto' | 'light' | 'dark'
   type Color = 'default' | 'green' | 'purple' | 'custom'
   type View = 'grid' | 'list'
-  type WindowStartState =
-    | 0 // Normal
-    | 2 // Minimised
+  type WindowStartState = 'normal' | 'minimised'
   type WebviewGpuPolicy =
     | 0 // Always
     | 1 // OnDemand
@@ -14,9 +12,13 @@ declare namespace App {
   type RequestMethod = 'GET' | 'POST' | 'DELETE' | 'PUT' | 'HEAD' | 'PATCH'
 
   interface AppEnv {
+    appId: string
     appName: string
     appVersion: string
     basePath: string
+    dataDir: string
+    args: string[]
+    launchArgs: string[]
     appPath: string
     os: OS
     arch: string
@@ -54,6 +56,7 @@ declare namespace App {
     primaryColor: string
     secondaryColor: string
     fontFamily: string
+    systemTitleBar: boolean
     profilesView: View
     subscribesView: View
     rulesetsView: View
@@ -135,6 +138,7 @@ declare namespace App {
     type: 'Http' | 'File'
     url: string
     path: string
+    hash?: string
     triggers: (
       | 'on::enabled'
       | 'on::disabled'
@@ -374,6 +378,7 @@ declare namespace App {
       'route-exclude-address': string[]
       'auto-detect-interface': boolean
       'dns-hijack': string[]
+      'dns-mode': string
       device: string
       mtu: number
       'strict-route': boolean

@@ -13,6 +13,36 @@ import {
 import { RulesetBehavior, RulesetFormat, RuleType } from '@/enums/kernel'
 import { deepAssign, sampleID } from '@/utils'
 
+// Rule types whose payload may contain commas; they take no params, so the proxy is the last item
+const CommaPayloadRules = [
+  'AND',
+  'OR',
+  'NOT',
+  'SUB-RULE',
+  'DOMAIN-REGEX',
+  'PROCESS-NAME-REGEX',
+  'PROCESS-PATH-REGEX',
+]
+const LogicRules = ['AND', 'OR', 'NOT', 'SUB-RULE']
+
+// Splits a rule the same way as mihomo (ParseRulePayload in rules/common/base.go)
+const parseRule = (rule: string) => {
+  const [rawType = '', ...items] = rule.split(',').map((v) => v.trim())
+  const type = rawType.toUpperCase()
+  if (type === RuleType.Match) {
+    return { type, payload: '', proxy: items[0] ?? '', noResolve: false }
+  }
+  if (CommaPayloadRules.includes(type)) {
+    const proxy = items.pop() ?? ''
+    const payload = items.join(',')
+    return LogicRules.includes(type)
+      ? { type: RuleType.Logic, payload: `${type},${payload}`, proxy, noResolve: false }
+      : { type, payload, proxy, noResolve: false }
+  }
+  const [payload = '', proxy = '', ...params] = items
+  return { type, payload, proxy, noResolve: params.includes('no-resolve') }
+}
+
 export const restoreProfile = (
   config: Record<string, any>,
   subID: string,
@@ -108,8 +138,6 @@ export const restoreProfile = (
       : GroupNameIdMap[type] || IdNameMap[NameIdMap[type]!]
   }
 
-  let isGeoModeEnabled = false
-
   Object.entries(config).forEach(([field, value]) => {
     if (Object.hasOwnProperty.call(profile.generalConfig, field)) {
       ; (profile.generalConfig as any)[field] = value
@@ -134,6 +162,13 @@ export const restoreProfile = (
         })
       }
       profile.dnsConfig = deepAssign(profile.dnsConfig, value)
+      // Like hosts, the profile keeps a list of nameservers as a comma-separated string
+      const policy = profile.dnsConfig['nameserver-policy']
+      Object.entries<string | string[]>(policy).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          policy[key] = value.join(',')
+        }
+      })
     } else if (field === 'tun') {
       profile.tunConfig = deepAssign(profile.tunConfig, value)
     } else if (field === 'hosts') {
@@ -146,48 +181,13 @@ export const restoreProfile = (
       })
     } else if (field === 'rules') {
       config[field].forEach((rule: string, index: number) => {
-        let qs = rule
-        let noResolve = false
+        const { type, payload, proxy, noResolve } = parseRule(rule)
 
-        if (qs.toLowerCase().endsWith('no-resolve')) {
-          noResolve = true
-          qs = qs.substring(0, qs.lastIndexOf(','))
-        }
+        const isSubRule = type === RuleType.Logic && /^SUB-RULE,/i.test(payload)
+        const _proxy = isSubRule ? proxy : getRuleProxy(proxy)
 
-        const lastComma = qs.lastIndexOf(',')
-        const payloadAndType = qs.substring(0, lastComma)
-        const proxy = qs.substring(lastComma + 1)
-
-        const parts = payloadAndType.split(',')
-        let type = parts[0]
-        let payload = parts.slice(1).join(',')
-
-        // Handle logical/complex rules (AND, OR, NOT, etc)
-        const upperType = type?.toUpperCase() || ''
-        if (
-          ['AND', 'OR', 'NOT', 'SUB-RULE'].includes(upperType) ||
-          payloadAndType.includes('((')
-        ) {
-          type = RuleType.Logic
-          payload = payloadAndType
-        }
-
-        // SUB-RULE type doesn't use proxy parameter
-        // Format: SUB-RULE,(logic_condition),sub_rule_name
-        const isSubRule = upperType === 'SUB-RULE'
-
-        let _proxy: string | undefined
-        if (!isSubRule) {
-          // For all non-SUB-RULE rules, the proxy/policy is in the 'proxy' variable
-          _proxy = getRuleProxy(proxy)
-        } else {
-          // For SUB-RULE, the last part is the sub-rule name
-          // We'll use the proxy field to store the sub-rule name
-          _proxy = proxy // e.g., "QUIC_CHECK"
-        }
-
-        // Skip invalid rules：proxy missing (except for SUB-RULE which doesn't need proxy)
-        if (!_proxy && !isSubRule) {
+        // Skip invalid rules: proxy missing (except for SUB-RULE which stores sub-rule name in proxy)
+        if (!_proxy) {
           return
         }
 
@@ -202,8 +202,8 @@ export const restoreProfile = (
             type: type,
             enable: true,
             payload: provider.type == 'inline' ? stringify(provider.payload) : provider.url,
-            proxy: _proxy || '',
-            'no-resolve': !!noResolve,
+            proxy: _proxy,
+            'no-resolve': noResolve,
             'ruleset-behavior': provider.behavior,
             'ruleset-format': provider.format || RulesetFormat.Yaml,
             'ruleset-type': provider.type || 'http',
@@ -222,9 +222,9 @@ export const restoreProfile = (
           id: index.toString(),
           type: type as RuleType,
           enable: true,
-          payload: type === 'MATCH' ? '' : payload,
-          proxy: _proxy || '',
-          'no-resolve': !!noResolve,
+          payload,
+          proxy: _proxy,
+          'no-resolve': noResolve,
           'ruleset-behavior': RulesetBehavior.Domain,
           'ruleset-format': RulesetFormat.Mrs,
           'ruleset-type': 'http',

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/wailsapp/wails/v2/pkg/menu"
+	"github.com/wailsapp/wails/v2/pkg/options"
 )
 
 // App struct
@@ -16,14 +17,19 @@ type App struct {
 type EnvResult struct {
 	IsStartup    bool   `json:"-"`
 	PreventExit  bool   `json:"-"`
-	FromTaskSch  bool   `json:"-"`
 	WebviewPath  string `json:"-"`
+	AppId        string `json:"appId"`
 	AppName      string `json:"appName"`
 	AppVersion   string `json:"appVersion"`
 	BasePath     string `json:"basePath"`
+	DataDir      string `json:"dataDir"`
 	OS           string `json:"os"`
 	ARCH         string `json:"arch"`
 	IsPrivileged bool   `json:"isPrivileged"`
+
+	Args             []string                 `json:"args"`
+	LaunchArgs       []string                 `json:"launchArgs"`
+	WindowStartState options.WindowStartState `json:"-"`
 }
 
 type RequestOptions struct {
@@ -85,14 +91,13 @@ type HTTPResult struct {
 }
 
 type AppConfig struct {
-	WindowStartState  int  `yaml:"windowStartState"`
 	WebviewGpuPolicy  int  `yaml:"webviewGpuPolicy"`
 	ContentProtection bool `yaml:"contentProtection"`
 	Width             int  `yaml:"width"`
 	Height            int  `yaml:"height"`
 	MultipleInstance  bool `yaml:"multipleInstance"`
 	RollingRelease    bool `yaml:"rollingRelease" default:"true"`
-	StartHidden       bool
+	SystemTitleBar    bool `yaml:"systemTitleBar"`
 }
 
 type TrayContent struct {

@@ -1,8 +1,9 @@
+import DOMPurify, { type Config } from 'dompurify'
 import { stringify } from 'yaml'
 
 import { OS } from '@/enums/app'
-import { useAppSettingsStore, useEnvStore } from '@/stores'
 import appDts from '@/types/app.d.ts?raw'
+import { useAppSettingsStore } from '@/stores'
 import { APP_TITLE, APP_VERSION, isValidIPv4, isValidIPv6 } from '@/utils'
 
 export const getAppDts = () => appDts
@@ -268,7 +269,19 @@ export const transformRequestUrl = (url: string) => {
   return url
 }
 
-export const getAutoStartConfiguration = (os: App.OS | OS, appPath: string, delay = 30) => {
+const escapeXml = (s: string) => s.replace(/[&<>]/g, (c) => `&#${c.charCodeAt(0)};`)
+
+export const quoteWindowsArg = (arg: string) => {
+  if (arg && !/[\s"]/.test(arg)) return arg
+  return `"${arg.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/, '$1$1')}"`
+}
+
+export const getAutoStartConfiguration = (
+  os: App.OS,
+  appPath: string,
+  args: string[],
+  delay = 30,
+) => {
   if (os === OS.Windows) {
     const xml = /*xml*/ `<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
@@ -309,8 +322,8 @@ export const getAutoStartConfiguration = (os: App.OS | OS, appPath: string, dela
   </Settings>
   <Actions Context="Author">
     <Exec>
-      <Command>${appPath}</Command>
-      <Arguments>tasksch</Arguments>
+      <Command>${escapeXml(appPath)}</Command>
+      <Arguments>${escapeXml(args.map(quoteWindowsArg).join(' '))}</Arguments>
     </Exec>
   </Actions>
 </Task>
@@ -318,9 +331,10 @@ export const getAutoStartConfiguration = (os: App.OS | OS, appPath: string, dela
     return xml
   }
   if (os === OS.Linux) {
+    const exec = [appPath, ...args].map((arg) => `"${arg.replace(/["`$\\]/g, '\\$&')}"`).join(' ')
     const desktop = `[Desktop Entry]
 Type=Application
-Exec=${appPath} tasksch
+Exec=${exec.replace(/[%\\]/g, '$&$&')}
 Name=${APP_TITLE}`
     return desktop
   }
@@ -334,10 +348,7 @@ Name=${APP_TITLE}`
     <string>${APP_TITLE}</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/bin/open</string>
-        <string>${appPath}</string>
-        <string>--args</string>
-        <string>tasksch</string>
+${['/usr/bin/open', appPath, '--args', ...args].map((arg) => `        <string>${escapeXml(arg)}</string>`).join('\n')}
     </array>
     <key>RunAtLoad</key>
     <true/>
@@ -346,60 +357,6 @@ Name=${APP_TITLE}`
     return plist
   }
   throw new Error('Not Implemented')
-}
-
-// macOS LaunchAgent plist Helper
-export const getLaunchAgentPlistString = async (delay = 30) => {
-  const { appPath } = useEnvStore().env
-
-  // Note: macOS LaunchAgent doesn't have a native "delay" like Windows Task Scheduler.
-  // We use a shell script wrapper with 'sleep' to achieve the delay effect.
-  // The argument format: /bin/sh -c "sleep 30 && open /path/to/app"
-  const plist = /*xml*/ `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>${APP_TITLE}</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/bin/sh</string>
-        <string>-c</string>
-        <string>sleep ${delay} &amp;&amp; "${appPath}" tasksch</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>KeepAlive</key>
-    <false/>
-</dict>
-</plist>
-`
-
-  return plist
-}
-
-export const getTaskSchXmlString = async (delay = 30) => {
-  const { appPath } = useEnvStore().env
-  return getAutoStartConfiguration(OS.Windows, appPath, delay)
-}
-
-// Linux XDG Autostart .desktop file Helper
-export const getDesktopAutostartString = async (delay = 30) => {
-  const { appPath } = useEnvStore().env
-
-  // Note: Linux autostart doesn't have a built-in delay mechanism.
-  // We use bash sleep command to achieve the delay effect.
-  const desktop = `[Desktop Entry]
-Type=Application
-Name=${APP_TITLE}
-Comment=${APP_TITLE} auto-start
-Exec=bash -c "sleep ${delay} && '${appPath}' tasksch"
-Terminal=false
-Hidden=false
-X-GNOME-Autostart-enabled=true
-`
-
-  return desktop
 }
 
 export const setIntervalImmediately = (func: () => void, interval: number) => {
@@ -484,6 +441,15 @@ export const base64UrlEncode = (str: string): string => {
   return base64Encode(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
+export const utf16leBase64Encode = (str: string): string => {
+  let bytes = '\xff\xfe'
+  for (let i = 0; i < str.length; i++) {
+    const code = str.charCodeAt(i)
+    bytes += String.fromCharCode(code & 0xff, code >> 8)
+  }
+  return btoa(bytes)
+}
+
 export const base64Encode = (str: string): string => {
   const bytes = new TextEncoder().encode(str)
   const len = bytes.length
@@ -558,4 +524,46 @@ export const buildSmartRegExp = (pattern: string, flags = '') => {
 
   regexCache.set(key, r)
   return r
+}
+
+/**
+ * Default policy for rendering untrusted HTML (subscriptions, remote changelogs, plugins).
+ * The webview can call window.go bindings, so anything that can run script, submit data
+ * or change the document base must be removed.
+ */
+export const HTML_SANITIZE_CONFIG: Config = {
+  USE_PROFILES: { html: true },
+  FORBID_TAGS: [
+    'style',
+    'script',
+    'iframe',
+    'frame',
+    'frameset',
+    'object',
+    'embed',
+    'form',
+    'input',
+    'button',
+    'textarea',
+    'select',
+    'option',
+    'link',
+    'meta',
+    'base',
+  ],
+  FORBID_ATTR: ['srcset', 'action', 'formaction', 'xlink:href'],
+  ALLOW_DATA_ATTR: false,
+}
+
+/**
+ * Sanitize an HTML string before assigning it to innerHTML / v-html.
+ */
+export const sanitizeHtml = (html: string, config: Config = HTML_SANITIZE_CONFIG): string => {
+  return DOMPurify.sanitize(html, config)
+}
+
+export const sha256 = async (text: string) => {
+  const data = new TextEncoder().encode(text)
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', data))
+  return Array.from(digest, (b) => b.toString(16).padStart(2, '0')).join('')
 }

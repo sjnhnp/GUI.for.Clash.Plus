@@ -16,7 +16,14 @@ export enum TunStack {
   System = 'System',
   GVisor = 'gVisor',
   Mixed = 'Mixed',
-  Mips = 'mips',
+  Mips = 'Mips',
+}
+
+export enum TunDnsMode {
+  Default = '',
+  Disabled = 'disabled',
+  Native = 'native',
+  Hijack = 'hijack',
 }
 
 export enum RulesetFormat {

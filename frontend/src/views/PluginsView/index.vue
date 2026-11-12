@@ -2,11 +2,11 @@
 import { computed } from 'vue'
 import { useI18n, I18nT } from 'vue-i18n'
 
-import { OpenURI } from '@/bridge'
+import { AbsolutePath, OpenURI } from '@/bridge'
 import { DraggableOptions } from '@/constant/app'
 import { PluginTriggerEvent, PluginTrigger, View } from '@/enums/app'
-import { usePluginsStore, useAppSettingsStore, useEnvStore } from '@/stores'
-import { debounce, deepClone, message, modal } from '@/utils'
+import { usePluginsStore, useAppSettingsStore } from '@/stores'
+import { alert, debounce, deepClone, message, modal } from '@/utils'
 
 import Button from '@/components/Button/index.vue'
 
@@ -34,14 +34,13 @@ const menuList: App.Menu[] = [
     label: 'common.openFile',
     handler: async (id: string) => {
       const plugin = pluginsStore.getPluginById(id)
-      await OpenURI(envStore.env.basePath + '/' + plugin!.path)
+      await OpenURI(await AbsolutePath(plugin!.path))
     },
   },
 ]
 
 const { t } = useI18n()
 
-const envStore = useEnvStore()
 const pluginsStore = usePluginsStore()
 const appSettingsStore = useAppSettingsStore()
 
@@ -74,8 +73,12 @@ const handleEditPlugin = (id: string) => {
 
 const handleUpdatePluginHub = async () => {
   try {
-    await pluginsStore.updatePluginHub()
-    message.success('plugins.updateSuccess')
+    const changes = await pluginsStore.updatePluginHub()
+    if (changes) {
+      alert('plugins.changes.title', changes, { type: 'markdown' })
+    } else {
+      message.success('plugins.updateSuccess')
+    }
   } catch (error: any) {
     console.error('handleUpdatePluginHub: ', error)
     message.error(error)
@@ -84,8 +87,13 @@ const handleUpdatePluginHub = async () => {
 
 const handleUpdatePlugins = async () => {
   try {
-    await pluginsStore.updatePlugins()
-    message.success('common.success')
+    const result = await pluginsStore.updatePlugins()
+    const failed = result.filter((v) => !v.ok)
+    if (failed.length) {
+      alert('common.warning', failed.map((v) => `- ${v.result}`).join('\n'), { type: 'markdown' })
+    } else {
+      message.success('common.success')
+    }
   } catch (error: any) {
     console.error('handleUpdatePlugins: ', error)
     message.error(error)

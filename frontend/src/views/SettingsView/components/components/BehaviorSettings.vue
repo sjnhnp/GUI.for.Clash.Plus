@@ -1,29 +1,15 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 
-import { ExitApp, WriteFile, RemoveFile, AbsolutePath } from '@/bridge'
+import { RestartApp } from '@/bridge'
 import { WebviewGpuPolicyOptions, WindowStateOptions } from '@/constant/app'
 import { OS } from '@/enums/app'
 import { useAppSettingsStore, useEnvStore } from '@/stores'
 import {
-  APP_TITLE,
-  getTaskSchXmlString,
-  getLaunchAgentPlistString,
-  getDesktopAutostartString,
   confirm,
   message,
-  QuerySchTask,
-  CreateSchTask,
-  DeleteSchTask,
-  QueryLaunchAgent,
-  CreateLaunchAgent,
-  DeleteLaunchAgent,
-  QueryDesktopAutostart,
-  CreateDesktopAutostart,
-  DeleteDesktopAutostart,
   CheckPermissions,
   SwitchPermissions,
-  RunWithPowerShell,
   IsAutoStartEnabled,
   EnableAutoStart,
   DisableAutoStart,
@@ -33,23 +19,14 @@ const appSettings = useAppSettingsStore()
 const envStore = useEnvStore()
 
 const isAdmin = ref(false)
-const isAutoStartEnabled = ref(false)
-
-const restartApp = async (admin = false) => {
-  if (admin) {
-    await RunWithPowerShell(envStore.env.appPath, [], { admin, wait: false })
-  } else {
-    await RunWithPowerShell('explorer', [envStore.env.appPath], { wait: false })
-  }
-  await ExitApp()
-}
+const isAutoStart = ref(false)
 
 const onPermChange = async (v: boolean) => {
   try {
     await SwitchPermissions(v)
     if (v !== envStore.env.isPrivileged) {
       const ok = await confirm('Notice', 'Restart the application now?').catch(() => 0)
-      ok && (await restartApp(v))
+      ok && (await RestartApp(v))
     }
   } catch (error: any) {
     message.error(error)
@@ -58,128 +35,41 @@ const onPermChange = async (v: boolean) => {
 }
 
 const onTaskSchChange = async (v: boolean) => {
-  isAutoStartEnabled.value = !v
+  isAutoStart.value = !v
+
   try {
-    if (v) {
-      await createSchTask(appSettings.app.startupDelay)
-    } else {
-      await DeleteSchTask(APP_TITLE)
-    }
-    isAutoStartEnabled.value = v
+    await (v ? EnableAutoStart() : DisableAutoStart())
+    isAutoStart.value = v
   } catch (error: any) {
     console.error(error)
     message.error(error)
   }
 }
 
-// macOS: LaunchAgent
-const onLaunchAgentChange = async (v: boolean) => {
-  isAutoStartEnabled.value = !v
+const onAutoStartOptionChange = async <K extends 'startupDelay' | 'windowStartState'>(
+  key: K,
+  value: App.AppSettings[K],
+) => {
+  const old = appSettings.app[key]
+  if (old === value) return
+  appSettings.app[key] = value
   try {
-    if (v) {
-      await createLaunchAgent(appSettings.app.startupDelay)
-    } else {
-      await DeleteLaunchAgent(APP_TITLE)
-    }
-    isAutoStartEnabled.value = v
+    await EnableAutoStart()
   } catch (error: any) {
+    appSettings.app[key] = old
     console.error(error)
     message.error(error)
   }
 }
 
-// Linux: XDG Autostart
-const onDesktopAutostartChange = async (v: boolean) => {
-  isAutoStartEnabled.value = !v
-  try {
-    if (v) {
-      await createDesktopAutostart(appSettings.app.startupDelay)
-    } else {
-      await DeleteDesktopAutostart(APP_TITLE)
-    }
-    isAutoStartEnabled.value = v
-  } catch (error: any) {
-    console.error(error)
-    message.error(error)
-  }
-}
+IsAutoStartEnabled().then((res) => {
+  isAutoStart.value = res
+})
 
-const onStartupDelayChange = async (delay: number) => {
-  if (appSettings.app.startupDelay !== delay) {
-    try {
-      if (envStore.env.os === OS.Windows) {
-        await createSchTask(delay)
-      } else if (envStore.env.os === OS.Darwin) {
-        await createLaunchAgent(delay)
-      } else if (envStore.env.os === OS.Linux) {
-        await createDesktopAutostart(delay)
-      }
-      appSettings.app.startupDelay = delay
-    } catch (error: any) {
-      console.error(error)
-      message.error(error)
-    }
-  }
-}
-
-// Windows: Check and create task
-const checkSchtask = async () => {
-  try {
-    await QuerySchTask(APP_TITLE)
-    isAutoStartEnabled.value = true
-  } catch {
-    isAutoStartEnabled.value = false
-  }
-}
-
-const createSchTask = async (delay = 30) => {
-  const xmlPath = 'data/.cache/tasksch.xml'
-  const xmlContent = await getTaskSchXmlString(delay)
-  await WriteFile(xmlPath, xmlContent)
-  await CreateSchTask(APP_TITLE, await AbsolutePath(xmlPath))
-  await RemoveFile(xmlPath)
-}
-
-// macOS: Check and create LaunchAgent
-const checkLaunchAgent = async () => {
-  try {
-    await QueryLaunchAgent(APP_TITLE)
-    isAutoStartEnabled.value = true
-  } catch {
-    isAutoStartEnabled.value = false
-  }
-}
-
-const createLaunchAgent = async (delay = 30) => {
-  const plistContent = await getLaunchAgentPlistString(delay)
-  await CreateLaunchAgent(APP_TITLE, plistContent)
-}
-
-// Linux: Check and create XDG Autostart
-const checkDesktopAutostart = async () => {
-  try {
-    await QueryDesktopAutostart(APP_TITLE)
-    isAutoStartEnabled.value = true
-  } catch {
-    isAutoStartEnabled.value = false
-  }
-}
-
-const createDesktopAutostart = async (delay = 30) => {
-  const desktopContent = await getDesktopAutostartString(delay)
-  await CreateDesktopAutostart(APP_TITLE, desktopContent)
-}
-
-// Initialize based on OS
 if (envStore.env.os === OS.Windows) {
-  checkSchtask()
   CheckPermissions().then((admin) => {
     isAdmin.value = admin
   })
-} else if (envStore.env.os === OS.Darwin) {
-  checkLaunchAgent()
-} else if (envStore.env.os === OS.Linux) {
-  checkDesktopAutostart()
 }
 </script>
 
@@ -199,27 +89,30 @@ if (envStore.env.os === OS.Windows) {
           type="primary"
           icon="refresh"
           size="small"
-          @click="() => restartApp(isAdmin)"
+          @click="RestartApp(isAdmin)"
         />
         <Switch v-model="isAdmin" @change="onPermChange" />
       </div>
     </div>
-    <div v-platform="[OS.Windows, OS.Darwin]" class="px-8 py-12 flex items-center justify-between">
+    <div
+      v-platform="[OS.Windows, OS.Darwin, OS.Linux]"
+      class="px-8 py-12 flex items-center justify-between"
+    >
       <div class="text-16 font-bold">
         {{ $t('settings.startup.name') }}
       </div>
       <div class="flex items-center">
         <Radio
-          v-if="isAutoStartEnabled"
-          v-model="appSettings.app.windowStartState"
+          v-if="isAutoStart"
+          :model-value="appSettings.app.windowStartState"
           :options="WindowStateOptions"
-          type="number"
+          @change="(v: App.WindowStartState) => onAutoStartOptionChange('windowStartState', v)"
         />
-        <Switch v-model="isAutoStartEnabled" class="ml-16" @change="onTaskSchChange" />
+        <Switch v-model="isAutoStart" class="ml-16" @change="onTaskSchChange" />
       </div>
     </div>
     <div
-      v-if="isAutoStartEnabled"
+      v-if="isAutoStart"
       v-platform="[OS.Windows]"
       class="px-8 py-12 flex items-center justify-between"
     >
@@ -232,82 +125,10 @@ if (envStore.env.os === OS.Windows) {
         :max="180"
         editable
         type="number"
-        @submit="onStartupDelayChange"
+        @submit="(v) => onAutoStartOptionChange('startupDelay', v)"
       >
         <template #suffix="{ showInput }">
           <span class="ml-4" @click="showInput">{{ $t('settings.startup.delay') }}</span>
-        </template>
-      </Input>
-    </div>
-    <!-- macOS Auto-Startup -->
-    <div v-platform="['darwin']" class="px-8 py-12 flex items-center justify-between">
-      <div class="text-16 font-bold">
-        {{ $t('settings.startup.name') }}
-      </div>
-      <div class="flex items-center">
-        <Radio
-          v-if="isAutoStartEnabled"
-          v-model="appSettings.app.windowStartState"
-          :options="WindowStateOptions"
-          type="number"
-        />
-        <Switch v-model="isAutoStartEnabled" @change="onLaunchAgentChange" class="ml-16" />
-      </div>
-    </div>
-    <div
-      v-if="isAutoStartEnabled"
-      v-platform="['darwin']"
-      class="px-8 py-12 flex items-center justify-between"
-    >
-      <div class="text-16 font-bold">
-        {{ $t('settings.startup.startupDelay') }}
-      </div>
-      <Input
-        :model-value="appSettings.app.startupDelay"
-        @submit="onStartupDelayChange"
-        :min="10"
-        :max="180"
-        editable
-        type="number"
-      >
-        <template #suffix="{ showInput }">
-          <span @click="showInput" class="ml-4">{{ $t('settings.startup.delay') }}</span>
-        </template>
-      </Input>
-    </div>
-    <!-- Linux Auto-Startup -->
-    <div v-platform="['linux']" class="px-8 py-12 flex items-center justify-between">
-      <div class="text-16 font-bold">
-        {{ $t('settings.startup.name') }}
-      </div>
-      <div class="flex items-center">
-        <Radio
-          v-if="isAutoStartEnabled"
-          v-model="appSettings.app.windowStartState"
-          :options="WindowStateOptions"
-          type="number"
-        />
-        <Switch v-model="isAutoStartEnabled" @change="onDesktopAutostartChange" class="ml-16" />
-      </div>
-    </div>
-    <div
-      v-if="isAutoStartEnabled"
-      v-platform="['linux']"
-      class="px-8 py-12 flex items-center justify-between"
-    >
-      <div class="text-16 font-bold">
-        {{ $t('settings.startup.startupDelay') }}
-      </div>
-      <Input
-        :model-value="appSettings.app.startupDelay"
-        @submit="onStartupDelayChange"
-        :min="10"
-        :max="180"
-        editable
-        type="number"
-      >
-        <template #suffix="{ showInput }">
-          <span @click="showInput" class="ml-4">{{ $t('settings.startup.delay') }}</span>
         </template>
       </Input>
     </div>

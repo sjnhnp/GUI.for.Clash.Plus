@@ -138,6 +138,7 @@ watch(() => props.dataSource.length, updateContainerHeight)
             class="px-4 py-8 whitespace-nowrap cursor-pointer"
           >
             <div
+              :role="column.sort ? 'button' : undefined"
               :style="{
                 justifyContent: { left: 'flext-start', center: 'center', right: 'flex-end' }[
                   column.align || 'left'

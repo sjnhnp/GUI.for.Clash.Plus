@@ -1,4 +1,11 @@
-import { ProxyGroup, RulesetBehavior, RulesetFormat, RuleType, TunStack } from '@/enums/kernel'
+import {
+  ProxyGroup,
+  RulesetBehavior,
+  RulesetFormat,
+  RuleType,
+  TunDnsMode,
+  TunStack,
+} from '@/enums/kernel'
 import i18n from '@/lang'
 import { generateSecureKey, sampleID } from '@/utils'
 
@@ -71,6 +78,7 @@ export const TunConfigDefaults = (): App.Profile['tunConfig'] => ({
   'route-exclude-address': [],
   'auto-detect-interface': true,
   'dns-hijack': ['any:53'],
+  'dns-mode': TunDnsMode.Default,
   device: '',
   mtu: 0,
   'strict-route': true,
@@ -86,7 +94,9 @@ export const DnsConfigDefaults = (): App.Profile['dnsConfig'] => ({
   'default-nameserver': [],
   nameserver: ['tls://8.8.8.8#' + t('kernel.proxyGroups.built-in.select')],
   'direct-nameserver': [],
-  'proxy-server-nameserver': [],
+  'proxy-server-nameserver': [
+    'https://223.5.5.5/dns-query#' + t('kernel.proxyGroups.built-in.direct'),
+  ],
   'nameserver-policy': {
     'rule-set:GEOSITE-CN': 'https://223.5.5.5/dns-query#' + t('kernel.proxyGroups.built-in.direct'),
     'rule-set:geolocation-!cn': 'tls://8.8.8.8#' + t('kernel.proxyGroups.built-in.select'),

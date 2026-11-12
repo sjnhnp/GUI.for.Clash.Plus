@@ -5,6 +5,7 @@ import { parse } from 'yaml'
 import { HttpGet, ReadFile, RemoveFile, Requests, WriteFile } from '@/bridge'
 import { PluginHubFilePath, PluginsFilePath } from '@/constant/app'
 import { PluginTrigger, PluginTriggerEvent, RequestMethod } from '@/enums/app'
+import i18n from '@/lang'
 import { useAppSettingsStore } from '@/stores'
 import {
   omitArray,
@@ -17,6 +18,8 @@ import {
   asyncPool,
   readonly,
   base64Encode,
+  getGitHubApiAuthorization,
+  sha256,
 } from '@/utils'
 
 const PreinstalledPlugins: App.Plugin[] = [
@@ -68,6 +71,8 @@ const PreinstalledPlugins: App.Plugin[] = [
     installed: true,
   },
 ]
+
+class PluginHashMismatchError extends Error {}
 
 type PluginRuntimeCache = {
   plugin: App.Plugin
@@ -565,7 +570,16 @@ export const usePluginsStore = defineStore('plugins', () => {
     plugins.value.push(plugin)
     upsertPluginCache(plugin)
     syncPluginObservers(plugin, !plugin.disabled)
-    await _doUpdatePlugin(plugin).catch(() => {})
+    try {
+      await _doUpdatePlugin(plugin)
+    } catch (error) {
+      if (error instanceof PluginHashMismatchError) {
+        plugins.value.splice(plugins.value.indexOf(plugin), 1)
+        syncPluginObservers(plugin, false)
+        releasePluginRuntimeCache(plugin.id)
+        throw error
+      }
+    }
     await runPluginEvent(plugin.id, PluginTriggerEvent.OnInstall, [], {
       allowDisabled: true,
       allowUndefined: true,
@@ -599,7 +613,7 @@ export const usePluginsStore = defineStore('plugins', () => {
     releasePluginRuntimeCache(id)
 
     if (plugin.path.startsWith('data')) {
-      await RemoveFile(plugin.path).catch((_) => {})
+      await RemoveFile(plugin.path).catch(() => {})
     }
     if (appSettingsStore.app.pluginSettings[plugin.id]) {
       if (await confirm('Tips', 'plugins.removeConfiguration').catch(() => 0)) {
@@ -665,8 +679,23 @@ export const usePluginsStore = defineStore('plugins', () => {
     await savePlugins()
   }
 
+  const fetchPluginCode = async (plugin: App.Plugin, hash?: string) => {
+    if (plugin.type === 'File') {
+      return ReadFile(plugin.path).catch(() => '')
+    }
+    const { status, body } = await HttpGet<string>(plugin.url)
+    if (status !== 200) {
+      throw new Error(`Failed to fetch plugin code from ${plugin.url}. Status: ${status}`)
+    }
+    if (hash && (await sha256(body)) !== hash.toLowerCase()) {
+      throw new PluginHashMismatchError(i18n.global.t('plugins.hashMismatch'))
+    }
+    return body
+  }
+
   const _doUpdatePlugin = async (plugin: App.Plugin) => {
     let nextPlugin = plugin
+    let code: string | undefined
     const isFromPluginHub = plugin.id.startsWith('plugin-')
     if (isFromPluginHub) {
       const newPlugin = pluginHub.value.find((v) => v.id === plugin.id)
@@ -674,6 +703,8 @@ export const usePluginsStore = defineStore('plugins', () => {
 
       const [major_now, minor_now, patch_now] = (plugin.version || '').substring(1).split('.')
       const [major_new, minor_new, patch_new] = (newPlugin.version || '').substring(1).split('.')
+
+      code = await fetchPluginCode(major_now !== major_new ? newPlugin : plugin, newPlugin.hash)
 
       if (major_now !== major_new) {
         newPlugin.updating = plugin.updating
@@ -699,23 +730,12 @@ export const usePluginsStore = defineStore('plugins', () => {
         nextPlugin = newPlugin
       } else if (minor_now !== minor_new || patch_now !== patch_new) {
         plugin.version = newPlugin.version
+        plugin.hash = newPlugin.hash
         await editPlugin(plugin.id, plugin)
       }
     }
 
-    let code = ''
-
-    if (nextPlugin.type === 'File') {
-      code = await ReadFile(nextPlugin.path).catch(() => '')
-    }
-
-    if (nextPlugin.type === 'Http') {
-      const { status, body } = await HttpGet(nextPlugin.url)
-      if (status !== 200) {
-        throw new Error(`Failed to fetch plugin code from ${nextPlugin.url}. Status: ${status}`)
-      }
-      code = body
-    }
+    if (code === undefined) code = await fetchPluginCode(nextPlugin, nextPlugin.hash)
 
     if (nextPlugin.type !== 'File') {
       await WriteFile(nextPlugin.path, code)
@@ -782,30 +802,84 @@ export const usePluginsStore = defineStore('plugins', () => {
   }
   const updatePluginHub = async () => {
     pluginHubLoading.value = true
-    const promises = appSettingsStore.app.plugins.sources.flatMap((source) => {
-      if (!source.enable) return []
-      return Requests<string>({
-        url: source.url,
-        method: RequestMethod.Get,
-        autoTransformBody: false,
-      })
-    })
-    const results = await Promise.allSettled(promises)
-
-    pluginHub.value = results.reduce((acc, result) => {
-      if (result.status === 'fulfilled') {
+    const oldHub = pluginHub.value
+    const sources = appSettingsStore.app.plugins.sources.filter((v) => v.enable)
+    const results = await Promise.allSettled(
+      sources.map(async (source) => {
+        let isGitHubApi = false
         try {
-          const plugins = JSON.parse(result.value.body) as App.Plugin[]
-          acc.push(...plugins)
-        } catch (error) {
-          console.error('Failed to parse plugin list from source. Reason: ', error)
+          const url = new URL(source.url)
+          isGitHubApi =
+            url.protocol === 'https:' &&
+            url.host === 'api.github.com' &&
+            !url.username &&
+            !url.password
+        } catch {
+          // Let Requests report invalid source URLs as before.
         }
-      }
-      return acc
-    }, [] as App.Plugin[])
+        const authorization = isGitHubApi ? getGitHubApiAuthorization() : ''
+        const { status, body } = await Requests<string>({
+          url: source.url,
+          method: RequestMethod.Get,
+          headers: isGitHubApi
+            ? {
+                Accept: 'application/vnd.github.raw+json',
+                ...(authorization ? { Authorization: authorization } : {}),
+              }
+            : {},
+          options: isGitHubApi ? { Redirect: false } : {},
+          autoTransformBody: false,
+        })
+        if (status !== 200) throw `HTTP ${status}`
+        let plugins: App.Plugin[]
+        try {
+          plugins = JSON.parse(body)
+        } catch {
+          throw 'Invalid JSON'
+        }
+        if (!Array.isArray(plugins)) throw 'Invalid JSON'
+        return plugins
+      }),
+    )
+
+    const failed: { name: string; url: string; reason: string }[] = []
+    pluginHub.value = results.flatMap((result, index) => {
+      if (result.status === 'fulfilled') return result.value
+      const { name, url } = sources[index]!
+      const reason = String(result.reason?.message ?? result.reason)
+      console.error(`Failed to update plugin list from source [${name}]. Reason: `, reason)
+      failed.push({ name, url, reason })
+      return []
+    })
 
     await WriteFile(PluginHubFilePath, JSON.stringify(pluginHub.value))
     pluginHubLoading.value = false
+
+    const oldMap = new Map(oldHub.map((v) => [v.id, v]))
+    const newIds = new Set(pluginHub.value.map((v) => v.id))
+    const hasOld = oldHub.length !== 0
+    const added = hasOld ? pluginHub.value.filter((v) => !oldMap.has(v.id)) : []
+    const removed = oldHub.filter((v) => !newIds.has(v.id))
+    const updated = pluginHub.value.filter((v) => {
+      const old = oldMap.get(v.id)
+      return old && old.version !== v.version
+    })
+
+    const { t } = i18n.global
+    const section = <T>(title: string, list: T[], fn: (v: T) => string) =>
+      list.length ? [`**${t(title)} (${list.length})**`, '', ...list.map(fn), ''] : []
+    const item = (v: App.Plugin) => `- ${v.name} \`${v.id}\``
+
+    return [
+      ...section('plugins.changes.failed', failed, (v) => `- ${v.name} \`${v.reason}\` ${v.url}`),
+      ...section('plugins.changes.added', added, item),
+      ...section('plugins.changes.removed', removed, item),
+      ...section(
+        'plugins.changes.updated',
+        updated,
+        (v) => `${item(v)} ${oldMap.get(v.id)!.version} → ${v.version}`,
+      ),
+    ].join('\n')
   }
 
   const getPluginById = (id: string) => plugins.value.find((v) => v.id === id)

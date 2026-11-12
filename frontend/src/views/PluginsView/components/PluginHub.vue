@@ -3,8 +3,9 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { usePluginsStore } from '@/stores'
-import { createTextMatcher, deepClone, message, modal } from '@/utils'
+import { alert, createTextMatcher, deepClone, message, modal } from '@/utils'
 
+import PluginDetails from './PluginDetails.vue'
 import PluginSource from './PluginSource.vue'
 
 const keywords = ref('')
@@ -66,10 +67,27 @@ const handleAddPlugin = async (plugin: App.Plugin) => {
   }
 }
 
+const handleShowDetails = (plugin: App.Plugin) => {
+  const m = modal({
+    footer: false,
+    px: 0,
+    py: 0,
+    minWidth: '50',
+    maxWidth: '60',
+    maxHeight: '85',
+    maskClosable: true,
+  })
+  m.setContent(PluginDetails, { plugin }).open()
+}
+
 const handleUpdatePluginHub = async () => {
   try {
-    await pluginsStore.updatePluginHub()
-    message.success('plugins.updateSuccess')
+    const changes = await pluginsStore.updatePluginHub()
+    if (changes) {
+      alert('plugins.changes.title', changes, { type: 'markdown' })
+    } else {
+      message.success('plugins.updateSuccess')
+    }
   } catch (err: any) {
     message.error(err.message || err)
   }
@@ -144,7 +162,12 @@ if (pluginsStore.pluginHub.length === 0) {
         <div class="text-16 font-bold px-4 py-12 sticky top-0 z-9">{{ group.name }}</div>
 
         <div class="grid grid-cols-2 gap-8">
-          <Card v-for="plugin in group.plugins" :key="plugin.id">
+          <Card
+            v-for="plugin in group.plugins"
+            :key="plugin.id"
+            class="cursor-pointer"
+            @click="handleShowDetails(plugin)"
+          >
             <template #title-prefix>
               <div class="text-14 font-bold">{{ plugin.name }}</div>
             </template>
@@ -160,7 +183,7 @@ if (pluginsStore.pluginHub.length === 0) {
                   type="text"
                   icon="add"
                   size="small"
-                  @click="handleAddPlugin(plugin)"
+                  @click.stop="handleAddPlugin(plugin)"
                 />
               </div>
             </div>

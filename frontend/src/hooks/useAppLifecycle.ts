@@ -6,40 +6,46 @@ import { exitApp, message, modal, sampleID, sleep } from '@/utils'
 
 import CommandView from '@/components/_common/CommandView.vue'
 
+export const handleLaunchApp = async (args: string[]) => {
+  const arg = args.find((a) => a.includes('://'))
+  if (!arg) return
+
+  let _url
+  let _name = sampleID()
+
+  const url = new URL(arg)
+  if (
+    url.pathname === '//install-config/' ||
+    url.hostname === 'install-config' ||
+    url.hostname === 'import-remote-profile'
+  ) {
+    _url = url.searchParams.get('url')
+    _name = url.searchParams.get('name') || sampleID()
+  } else if (url.pathname.startsWith('//import-remote-profile')) {
+    _url = url.searchParams.get('url')
+    _name = decodeURIComponent(url.hash).slice(1) || sampleID()
+  }
+
+  if (!_url) {
+    message.error('URL missing')
+    return
+  }
+
+  try {
+    await Stores.useSubscribesStore().importSubscribe(_name, _url)
+    message.success('common.success')
+  } catch (error) {
+    message.error(error)
+  }
+}
+
 export const useAppLifecycle = () => {
   const appStore = Stores.useAppStore()
   const appSettings = Stores.useAppSettingsStore()
-  const subscribesStore = Stores.useSubscribesStore()
   const kernelApiStore = Stores.useKernelApiStore()
   let commandModal: ReturnType<typeof modal> | undefined
 
-  const offLaunchApp = EventsOn('onLaunchApp', async ([arg]: string[]) => {
-    if (!arg) return
-
-    let _url
-    let _name = sampleID()
-
-    const url = new URL(arg)
-    if (url.pathname === '//install-config/') {
-      _url = url.searchParams.get('url')
-      _name = url.searchParams.get('name') || sampleID()
-    } else if (url.pathname.startsWith('//import-remote-profile')) {
-      _url = url.searchParams.get('url')
-      _name = decodeURIComponent(url.hash).slice(1) || sampleID()
-    }
-
-    if (!_url) {
-      message.error('URL missing')
-      return
-    }
-
-    try {
-      await subscribesStore.importSubscribe(_name, _url)
-      message.success('common.success')
-    } catch (error) {
-      message.error(error)
-    }
-  })
+  const offLaunchApp = EventsOn('onLaunchApp', handleLaunchApp)
 
   const offBeforeExitApp = EventsOn('onBeforeExitApp', async () => {
     if (appSettings.app.exitOnClose) {

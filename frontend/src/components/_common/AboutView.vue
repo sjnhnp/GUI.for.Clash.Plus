@@ -12,7 +12,7 @@ const appStore = useAppStore()
 
 const handleRestartApp = async () => {
   try {
-    await RestartApp()
+    await RestartApp(envStore.env.isPrivileged)
   } catch (error: any) {
     message.error(error)
   }

@@ -158,6 +158,7 @@ defineExpose({
       v-if="editable && !showEdit"
       :class="{ 'is-placeholder italic pr-4': !modelValue }"
       class="w-full overflow-hidden whitespace-nowrap text-ellipsis"
+      role="button"
       @click="showInput"
     >
       <slot name="editable" v-bind="{ value: modelValue }">

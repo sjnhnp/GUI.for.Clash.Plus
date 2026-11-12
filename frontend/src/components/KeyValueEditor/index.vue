@@ -65,7 +65,13 @@ const emitUpdate = () => {
         class="flex-1"
         @submit="emitUpdate"
       />
-      <Button type="text" :icon-size="12" icon="close" @click="handleDel(i)" />
+      <Button
+        :aria-label="$t('common.delete')"
+        :icon-size="12"
+        icon="close"
+        type="text"
+        @click="handleDel(i)"
+      />
       <Input
         v-model="entry[1]"
         :placeholder="placeholder[1]"
@@ -74,7 +80,7 @@ const emitUpdate = () => {
         @submit="emitUpdate"
       />
     </div>
-    <Button type="primary" icon="add" @click="handleAdd" />
+    <Button :aria-label="$t('common.add')" icon="add" type="primary" @click="handleAdd" />
   </div>
 </template>
 
